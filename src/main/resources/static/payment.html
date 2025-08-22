@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stripe Payment</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        .payment-form {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #card-element {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+<div class="payment-form">
+    <form id="payment-form">
+        <div id="card-element"></div>
+        <button type="submit">Pay</button>
+        <div id="error-message"></div>
+    </form>
+</div>
+<script>
+    // Initialize Stripe
+    const stripe = Stripe('your_stripe_publishable_key');
+    const elements = stripe.elements();
+    const card = elements.create('card');
+    card.mount('#card-element');
+    // Handle form submission
+    const form = document.getElementById('payment-form');
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        // Create payment intent
+        const response = await fetch('/api/payment/create-payment-intent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                amount: 1000 // Amount in cents
+            })
+        });
+
+        const data = await response.json();
+        // Confirm payment
+        const result = await stripe.confirmCardPayment(data.clientSecret, {
+            payment_method: {
+                card: card,
+                billing_details: {
+                    // Add billing details if needed
+                }
+            }
+        });
+        if (result.error) {
+            // Handle error
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = result.error.message;
+        } else {
+            // Payment successful
+            if (result.paymentIntent.status === 'succeeded') {
+                alert('Payment successful!');
+            }
+        }
+    });
+</script>
+</body>
+</html>
