@@ -1,6 +1,6 @@
 package dn.jasm.entity.enums;
 
-public enum OrderStatus {
+public enum  OrderStatus {
         NEW,
         PROCESSING,
         PAID,

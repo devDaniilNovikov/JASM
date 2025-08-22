@@ -1,6 +1,6 @@
 package dn.jasm.entity.enums;
 
-public enum CardStatus {
+public enum  CardStatus {
 
     ACTIVE,BLOCKED
 }

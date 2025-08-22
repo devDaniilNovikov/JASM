@@ -1,6 +1,6 @@
 package dn.jasm.entity.enums;
 
-public enum PaymentStatus {
+public enum  PaymentStatus {
 
     PROCESSING,
     CANCEL,

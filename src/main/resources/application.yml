@@ -9,7 +9,7 @@ server:
 
 spring:
   datasource:
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: org.postgresql.Driver.
     username: ${POSTGRES_USERNAME}
     password: ${POSTGRES_PASSWORD}
     url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/postgres

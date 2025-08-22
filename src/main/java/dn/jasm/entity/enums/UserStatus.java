@@ -1,6 +1,6 @@
 package dn.jasm.entity.enums;
 
-public enum UserStatus {
+public enum  UserStatus {
 
     NEW,BANNED,ACTIVE
 }
