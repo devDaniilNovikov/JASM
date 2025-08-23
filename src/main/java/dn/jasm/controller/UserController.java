@@ -1,8 +1,11 @@
 package dn.jasm.controller;
+import dn.jasm.configuration.swagger.SwaggerAnnotationForUser;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
 import dn.jasm.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,6 +14,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "User" ,description = "Действия с пользователем" )
 public class UserController {
 
     private static final String CREATE_USER = "/api/v1/user/create";
@@ -32,19 +36,20 @@ public class UserController {
 
     @GetMapping(GET_USER_WITH_NOT_NULL_COUNT_OF_DEALS)
     @ResponseStatus(HttpStatus.OK)
+    @SwaggerAnnotationForUser(operation = "Получение списка пользователя, у которого есть хотя бы одна покупка")
     public UserResponse findAllWithCountOfDealsGreatherThanNull(){
-        return userService.getUsersCountsOfDeals();
+        return userService.findAllWithCountOfDealsGreatherThanNull();
     }
 
     @GetMapping(GET_USER_BY_ORDER_ID)
     @ResponseStatus(HttpStatus.OK)
+    @SwaggerAnnotationForUser(operation = "Получение пользователя по его уникальному идентификатору")
     public UserResponse getUserByOrderId(@RequestParam Long orderId){
         return userService.getUserByOrderId(orderId);
     }
 
     @GetMapping(GET_USER_COUNTS_OF_DEALS)
     @ResponseStatus(HttpStatus.ACCEPTED)
-
     public UserResponse getCountsOfDealsOfUsers(){
         return userService.getUsersCountsOfDeals();
     }

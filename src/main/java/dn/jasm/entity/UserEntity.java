@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
@@ -31,6 +33,12 @@ public class UserEntity extends BasedEntity {
 
     @Column(unique = true,length = 11,nullable = false)
     private String phoneNumber;
+
+    @OneToOne(cascade = CascadeType.ALL,fetch = FetchType.LAZY,orphanRemoval = true)
+    @JoinColumn(name = "transaction_id")
+    @JsonManagedReference("user-transaction")
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private TransactionEntity transactionEntity;
 
     private String status;
 

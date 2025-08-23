@@ -18,6 +18,8 @@ public interface RedisService {
 
     Set<String> getKeySet(String keyPattern);
 
+    void deleteCachesByKeys(List<String> keys);
+
 
 
 

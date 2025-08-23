@@ -1,8 +1,9 @@
-package dn.jasm.service.scheduling;
+package dn.jasm.service.scheduling.impl;
 import dn.jasm.entity.UserEntity;
 import dn.jasm.repository.UserRepository;
 import dn.jasm.entity.enums.UserStatus;
 import dn.jasm.service.UserService;
+import dn.jasm.service.scheduling.UserScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -34,12 +35,13 @@ public class UserSchedulerImpl implements UserScheduler {
         var users = userRepository.findAllById(userIds)
                 .stream()
                 .collect(Collectors.toMap(UserEntity::getUsername, UserEntity::getStatus));
-        log.info("Banned users is delete! : {}",users.toString());
+        log.info("Banned users is delete : {}",users);
     }
 
 
     @Transactional
     @Scheduled(fixedDelay = 100000L)
+    @Override
     public void unbanUser() {
         List<UserEntity> bannedUsers = userRepository.findAllByStatus(UserStatus.ACTIVE.name())
                 .stream()
@@ -64,14 +66,15 @@ public class UserSchedulerImpl implements UserScheduler {
     }
 
 
+//    @Scheduled(fixedDelay = 100000L)
+    @Override
     public void cleanCache(){
-        Set<String> keys = redisTemplate.keys("*");
-        keys.stream()
-                .filter(key->!Objects.isNull(redisTemplate.opsForValue().get(key)))
-                .forEach(key->{
+        Set<String> keys = Objects.requireNonNull(redisTemplate.keys("*"));
+        keys.forEach(key -> {
                     redisTemplate.delete(key);
-                    log.info("Deleted keys with null values");
+                    log.info("Deleted keys with unexpected key: {}", key);
                 });
-
     }
+
 }
+

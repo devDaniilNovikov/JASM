@@ -41,7 +41,8 @@ dependencies {
     implementation("com.google.guava:guava:33.4.8-jre")
     implementation("com.ea.async:ea-async:1.2.3")
     // https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-ui
-    implementation("org.springdoc:springdoc-openapi-ui:1.7.0")
+
+    implementation ("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")
     // https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
     implementation("org.apache.commons:commons-lang3:3.18.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -50,8 +51,10 @@ dependencies {
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
     implementation("org.springframework.kafka:spring-kafka")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    // https://mvnrepository.com/artifact/org.postgresql/postgresql
+    implementation("org.postgresql:postgresql:42.7.7")
     compileOnly("org.projectlombok:lombok")
-    runtimeOnly("org.postgresql:postgresql")
+    runtimeOnly("org.postgresql:postgresql:42.7.7")
     annotationProcessor("org.projectlombok:lombok")
     compileOnly("org.projectlombok:lombok")
     annotationProcessor ("org.projectlombok:lombok-mapstruct-binding:0.2.0")

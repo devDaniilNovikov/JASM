@@ -14,30 +14,31 @@ public class ControllerAdvice {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorBody.builder()
                         .statusCode(HttpStatus.NOT_FOUND.value())
-                        .description(webRequest.getDescription(true))
+                        .description(ex.getLocalizedMessage())
                         .path(webRequest.getContextPath())
                         .build());
     }
 
-//    @ExceptionHandler(AlreadyExistException.class)
-//    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, AlreadyExistException ex){
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-//                .body(ErrorBody.builder()
-//                        .statusCode(HttpStatus.BAD_REQUEST.value())
-//                        .description(ex.getMessage())
-//                        .path(webRequest.getDescription(false))
-//                        .build());
+    @ExceptionHandler(AlreadyExistException.class)
+    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, AlreadyExistException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorBody.builder()
+                        .statusCode(HttpStatus.BAD_REQUEST.value())
+                        .description(ex.getMessage())
+                        .path(webRequest.getDescription(false))
+                        .build());
+    }
 
 
-//    @ExceptionHandler(Exception.class)
-//    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, Exception ex){
-//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                .body(ErrorBody.builder()
-//                        .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
-//                        .description(ex.getMessage())
-//                        .path(webRequest.getDescription(false))
-//                        .build());
-//    }
+    @ExceptionHandler(Exception.class)
+    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, Exception ex){
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ErrorBody.builder()
+                        .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                        .description(ex.getMessage())
+                        .path(webRequest.getDescription(false))
+                        .build());
+    }
 }
 
 

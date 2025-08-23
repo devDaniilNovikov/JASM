@@ -30,13 +30,12 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     @Loggable
-    @Transactional
     @TimeResulting
     public void writeObjectInRedis(String key, Object object) {
         if (checkKeyExist(key)){
             throw new RedisKeyException("Cache value by this keys already have in redis");
         }
-        redisTemplate.opsForValue().set(key,object, Duration.ofMinutes(10));
+        redisTemplate.opsForValue().set(key,object);
     }
 
 
@@ -108,6 +107,11 @@ public class RedisServiceImpl implements RedisService {
             return redisTemplate.keys("*");
         }
         throw new RedisKeyException("Can't find key");
+    }
+
+    @Override
+    public void deleteCachesByKeys(List<String> keys) {
+        redisTemplate.delete(keys);
     }
 
 

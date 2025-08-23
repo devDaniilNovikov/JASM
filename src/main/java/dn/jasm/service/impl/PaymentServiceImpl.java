@@ -13,29 +13,30 @@ import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.PriceCreateParams;
 import com.stripe.param.ProductCreateParams;
 import com.stripe.param.SubscriptionCreateParams;
+import dn.jasm.exception.OrderNotFoundException;
 import dn.jasm.exception.PaymentMethodException;
 import dn.jasm.configuration.StripeResponseSerializer;
-import dn.jasm.repository.CardRepository;
+import dn.jasm.repository.*;
 import dn.jasm.entity.enums.CardType;
-import dn.jasm.repository.ItemRepository;
 import dn.jasm.dto.item.ItemRequest;
-import dn.jasm.repository.PaymentRepository;
 import dn.jasm.entity.OrderEntity;
 import dn.jasm.entity.UserEntity;
-import dn.jasm.repository.UserRepository;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.service.ItemService;
 import dn.jasm.service.OrderService;
 import dn.jasm.service.PaymentService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.net.Proxy;
 import java.util.*;
+import java.util.concurrent.*;
 
 @Service
 @RequiredArgsConstructor
@@ -60,6 +61,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
     private final ItemRepository itemRepository;
+    private final OrderRepository orderRepository;
     private final CardRepository cardRepository;
     private final ItemService itemService;
     private final OrderService orderService;
@@ -95,13 +97,30 @@ public class PaymentServiceImpl implements PaymentService {
 
 
     @Override
+    @SneakyThrows
     public Customer createCustomer(UserRequest userRequest) {
+        Map<String,String> metadata = new HashMap<>();
+        Executor executor = Executors.newVirtualThreadPerTaskExecutor();
+        CompletableFuture<String> completableFuture = CompletableFuture.supplyAsync(()-> {
+                    return orderRepository.findByUserId(Long.valueOf(userRequest.getOrderId()))
+                            .map(OrderEntity::getId)
+                            .stream()
+                            .findAny()
+                            .map(String::valueOf)
+                            .orElseThrow(RuntimeException::new);
+                    },executor).thenApplyAsync((orderId)-> {
+            var id = orderRepository.findByUserId(Long.valueOf(userRequest.getOrderId()))
+                   .map(String::valueOf)
+                   .orElseThrow(RuntimeException::new);
+           return metadata.put(id,orderId);},executor);
+        CompletableFuture.allOf(completableFuture).get(1, TimeUnit.SECONDS);
         try {
             CustomerCreateParams params = CustomerCreateParams.builder()
                     .setName(userRequest.getUsername())
                     .setEmail(userRequest.getEmail())
                     .setPaymentMethod(CardType.DEBIT.name())
                     .setPhone(userRequest.getPhoneNumber())
+                    .setMetadata(metadata)
                     .build();
             return Customer.create(params);
         } catch (Exception e) {

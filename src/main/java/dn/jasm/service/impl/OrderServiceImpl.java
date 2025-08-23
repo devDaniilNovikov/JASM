@@ -52,7 +52,6 @@ public class OrderServiceImpl implements OrderService {
     private final UserService userService;
     private final UserMapper userMapper;
     private final OrderMapper orderMapper;
-    private final RedisTemplate<String,Object> redisTemplate;
     private final RedisService redisService;
 
     private final Map<String, ListOrderResponse> orderWithUsernameOfOwner = new HashMap<>();
@@ -90,31 +89,33 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public void completeOrder(Long orderId, Long userId) {
-        var order = orderRepository.findById(orderId)
-                .stream()
-                .map(o -> {
-                    BigDecimal orderTotalAmount = calculateTotalAmountOfOrder(o.getItems());
-                    o.setAmount(orderTotalAmount);
-                    o.setPayedAt(true);
-                    o.setCreatedAt(LocalDateTime.now());
-                    o.setOrderStatus(OrderStatus.PAID);
-                    var userWithChangedBalance = userRepository.findById(userId)
-                            .stream()
-                            .peek(user -> {
-                                var totalBalance = user.getBalance().subtract(orderTotalAmount);
-                                user.setBalance(totalBalance);
-                            })
-                            .findAny()
-                            .orElseThrow(() -> new UserNotFoundException(
-                                    MessageFormat.format("User with id: {0} not found", userId)));
-                    userRepository.save(userWithChangedBalance);
-                    o.setUser(userWithChangedBalance);
-                    userWithChangedBalance.getOrders().add(o);
-                    return orderRepository.save(o);
-                })
-                .findAny()
-                .orElseThrow(RuntimeException::new);
-        log.info("Order with id #{} completed", order.getId());
+        Thread.startVirtualThread(()-> {
+            var order = orderRepository.findById(orderId)
+                    .stream()
+                    .map(o -> {
+                        BigDecimal orderTotalAmount = calculateTotalAmountOfOrder(o.getItems());
+                        o.setAmount(orderTotalAmount);
+                        o.setPayedAt(true);
+                        o.setCreatedAt(LocalDateTime.now());
+                        o.setOrderStatus(OrderStatus.PAID);
+                        var userWithChangedBalance = userRepository.findById(userId)
+                                .stream()
+                                .peek(user -> {
+                                    var totalBalance = user.getBalance().subtract(orderTotalAmount);
+                                    user.setBalance(totalBalance);
+                                })
+                                .findAny()
+                                .orElseThrow(() -> new UserNotFoundException(
+                                        MessageFormat.format("User with id: {0} not found", userId)));
+                        userRepository.save(userWithChangedBalance);
+                        o.setUser(userWithChangedBalance);
+                        userWithChangedBalance.getOrders().add(o);
+                        return orderRepository.save(o);
+                    })
+                    .findAny()
+                    .orElseThrow(RuntimeException::new);
+            log.info("Order with id #{} completed", order.getId());
+        });
 
     }
 
@@ -188,7 +189,9 @@ public class OrderServiceImpl implements OrderService {
                 .filter(Objects::nonNull)
                 .map(OrderEntity::getId)
                 .findAny()
-                .orElseThrow(RuntimeException::new);
+                .orElseThrow(()->new OrderNotFoundException(
+                        MessageFormat.format(
+                                "Order for of user: {0} not found",user.getId())));
         return user.getOrders().stream()
                 .filter(Objects::nonNull)
                 .filter(orderEntity -> orderEntity.getId().equals(orderId))

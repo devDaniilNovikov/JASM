@@ -13,9 +13,7 @@ import java.math.BigDecimal;
 @Setter
 public class PaymentEntity extends BasedEntity {
 
-    @OneToOne
-    @JoinColumn(name = "transaction_id",nullable = false,updatable = false)
-    private TransactionEntity transactionEntity;
+
 
     @ManyToOne(fetch = FetchType.LAZY,cascade = {
             CascadeType.MERGE,

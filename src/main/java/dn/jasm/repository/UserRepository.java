@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     List<UserEntity> getAllByCountOfDealsNotNull();
 
+    Optional<UserEntity> findByTransactionEntityId(Long txId);
+
 
     boolean findByEmail(String email);
 

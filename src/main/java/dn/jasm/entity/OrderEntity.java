@@ -6,16 +6,21 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import dn.jasm.entity.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(schema = "jasm",name = "order")
 @Getter
 @Setter
+@NoArgsConstructor
 public class OrderEntity extends BasedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY,cascade = {CascadeType.PERSIST,CascadeType.MERGE})
@@ -33,17 +38,22 @@ public class OrderEntity extends BasedEntity {
 
     private Integer quantityOfItems;
 
+    @OneToOne(cascade = CascadeType.ALL,fetch = FetchType.LAZY)
+    @JoinColumn(name = "transaction_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private TransactionEntity transactionEntity;
+
 
     @OneToMany(mappedBy = "order",fetch = FetchType.LAZY)
     @JsonManagedReference
     private List<ItemEntity> items = new ArrayList<>();
 
-    @OneToOne
-    @JoinColumn(name = "tx_id")
-    private TransactionEntity transactionEntity;
+
 
     @Enumerated(EnumType.STRING)
     private OrderStatus orderStatus;
+
+
 
     @Override
     public boolean equals(Object object) {

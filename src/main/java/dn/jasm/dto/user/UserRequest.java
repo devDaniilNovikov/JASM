@@ -28,4 +28,6 @@ public class UserRequest implements Serializable {
     @NotEmpty(message = "Email can't be empty")
     private String email;
 
+    private String orderId;
+
 }

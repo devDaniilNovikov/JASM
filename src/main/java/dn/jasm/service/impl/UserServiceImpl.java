@@ -292,8 +292,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponseList findAllWithCountOfDealsGreatherThanNull() {
-        return userMapper.toList(userRepository.getAllByCountOfDealsNotNull());
+    public UserResponse findAllWithCountOfDealsGreatherThanNull() {
+        return UserResponse.builder()
+                .users(userRepository.getAllByCountOfDealsNotNull()
+                        .stream()
+                        .collect(Collectors.toMap(
+                                UserEntity::getUsername,
+                                UserEntity::getCountOfDeals)))
+                        .build();
     }
 
 

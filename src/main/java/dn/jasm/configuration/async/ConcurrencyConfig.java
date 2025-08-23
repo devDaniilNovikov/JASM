@@ -27,6 +27,7 @@ public class ConcurrencyConfig {
         taskExecutor.setCorePoolSize(5);
         taskExecutor.setQueueCapacity(25);
         taskExecutor.setThreadNamePrefix("JasmAsyncJobs-");
+        taskExecutor.setVirtualThreads(true);
         taskExecutor.initialize();
         return taskExecutor;
     }
