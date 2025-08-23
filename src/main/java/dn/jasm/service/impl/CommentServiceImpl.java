@@ -8,6 +8,7 @@ import dn.jasm.configuration.aop.TimeResulting;
 import dn.jasm.dto.comment.CommentRequest;
 import dn.jasm.dto.comment.CommentResponse;
 import dn.jasm.dto.comment.ListCommentResponse;
+import dn.jasm.entity.UserEntity;
 import dn.jasm.event.CommentEvent;
 import dn.jasm.exception.CommentNotFoundException;
 import dn.jasm.exception.UserNotFoundException;
@@ -41,6 +42,8 @@ public class CommentServiceImpl implements CommentService {
     private final RedisService redisService;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+
+    private final Map<String,ListCommentResponse> userAndComments = new HashMap<>();
 
 
 
@@ -83,7 +86,7 @@ public class CommentServiceImpl implements CommentService {
                 .orElseThrow(()->new CommentNotFoundException(
                         MessageFormat.format("Comment with id: {0} not found",id)));
         if (redisService.checkKeyExist(cacheKey)){
-            return commentMapper.toDto(comment);
+            return commentMapper.mapToDto(comment);
         }
         try {
             var jsonString = objectMapper.writeValueAsString(comment);
@@ -91,7 +94,7 @@ public class CommentServiceImpl implements CommentService {
         }catch (JsonProcessingException e){
             log.error("Cant put value in cache: {}",comment.toString());
         }
-        return commentMapper.toDto(comment);
+        return commentMapper.mapToDto(comment);
     }
 
     @Override
@@ -105,7 +108,7 @@ public class CommentServiceImpl implements CommentService {
         List<Object> commentValues = Collections.singletonList(comments);
             redisService.writeObjectsInRedis(keyOfComments, commentValues);
 
-        return commentMapper.toDtoList(comments);
+        return commentMapper.mapToCommentResponseList(comments);
     }
 
     @Override
@@ -124,38 +127,29 @@ public class CommentServiceImpl implements CommentService {
             redisService.writeObjectsInRedis(commentIds, Collections.singletonList(comments));
         }
 
-        return commentMapper.toList(comments);
+        return commentMapper.mapToDtoList(comments);
     }
 
     @Override
     @TimeResulting
-    public Map<String,List<CommentResponse>> getCommentsByUserId(Long userId) {
+    public Map<String,ListCommentResponse> getCommentsByUserId(Long userId) {
         var user = userRepository.findById(userId)
                 .filter(userEntity -> userEntity.getComments() != null)
-                .orElseThrow(RuntimeException::new);
-        Map<String,List<CommentEntity>> userAndComments = new HashMap<>();
-        List<CommentResponse> commentRequests = user.getComments()
-                .stream()
-                .map(comment->commentMapper.toResponse(CommentRequest.builder()
-                        .comment(comment.getComment())
-                        .rating(comment.getRating())
-                        .build()))
-                .toList();
-        String username = user.getUsername().toUpperCase().trim();
-        userAndComments.put(username,commentMapper.toEntityList(commentRequests));
-        Map<String,List<CommentResponse>> mappingMap = userAndComments
-                .entrySet()
-                .stream()
-                .collect(Collectors.toMap(Map.Entry::getKey,
-                        entry->commentMapper.toDtoList(entry.getValue())));
-        log.info("Comment map: {}",mappingMap.toString());
-        return mappingMap;
+                .orElseThrow(RuntimeException::new);;
+        ListCommentResponse listCommentResponse = new ListCommentResponse();
+        List<CommentEntity> commentEntities = user.getComments();
+        var mappingEntityListToDto = commentMapper.mapToCommentResponseList(commentEntities);
+        listCommentResponse.setComments(mappingEntityListToDto);
+        var username = user.getUsername();
+        userAndComments.put(username,listCommentResponse);
+        return userAndComments;
+
 
     }
 
     @Override
     public void deleteComment(Long commentId) {
-        var commentForDelete = commentMapper.toEntity(getCommentById(commentId));
+        var commentForDelete = commentMapper.mapToEntity(getCommentById(commentId));
          if (!commentRepository.existsById(commentId)){
              throw new CommentNotFoundException(
                      MessageFormat.format("Comment with id: {0} not found",commentId));

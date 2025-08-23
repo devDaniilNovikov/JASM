@@ -25,6 +25,7 @@ import dn.jasm.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -34,10 +35,9 @@ import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +50,8 @@ public class TransactionServiceImpl implements TransactionService {
     private final OrderRepository orderRepository;
     private final RedisService redisService;
     private final TransactionMapper transactionMapper;
+
+    private final Set<TransactionEntity> txSet = new LinkedHashSet<>();
 
 
     @Override
@@ -191,11 +193,23 @@ public class TransactionServiceImpl implements TransactionService {
                        tx.setUserEntity(null);
                        publishTransactionEvent(tx);
                        return transactionRepository.save(tx);
-                       })
-                .toList();
+                       }).toList();
         transactionRepository.saveAll(requireTransactions);
         log.info("Cancelled transactions is: {}",requireTransactions);
 
+    }
+
+    @Override
+    public LinkedHashSet<TransactionDto> getTransactionSet(int pageNumber,int pageSize) {
+        if (pageSize==0){
+            throw new IllegalArgumentException("PageSize can't be null");
+        }
+        PageRequest pageRequest = PageRequest.of(pageNumber,pageSize);
+        Set<TransactionEntity> txSet = transactionRepository.findAll(pageRequest)
+                .stream()
+                .sorted(Comparator.comparing(tx->tx.getUserEntity().getId()))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        return transactionMapper.mapToDtoSet(txSet);
     }
 }
 

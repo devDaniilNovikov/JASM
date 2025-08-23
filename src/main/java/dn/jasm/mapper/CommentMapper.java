@@ -1,34 +1,60 @@
 package dn.jasm.mapper;
 
-import dn.jasm.dto.comment.CommentRequest;
+
 import dn.jasm.dto.comment.CommentResponse;
 import dn.jasm.dto.comment.ListCommentResponse;
 import dn.jasm.entity.CommentEntity;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.ReportingPolicy;
+import dn.jasm.exception.UserNotFoundException;
+import dn.jasm.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
+import java.text.MessageFormat;
+import java.time.LocalDateTime;
 import java.util.List;
 
-@Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface CommentMapper extends Mappable<CommentEntity, CommentResponse> {
+@Component
+@RequiredArgsConstructor
+public class CommentMapper {
 
+    private final UserRepository userRepository;
 
-    @Mapping(source = "rating", target = "rating")
-    @Mapping(source = "comment", target = "comment")
-    @Mapping(target = "ownerName",source = "user.username")
-    @Override
-    CommentResponse toDto(CommentEntity entity);
+    public CommentResponse mapToDto(CommentEntity commentEntity){
+        return CommentResponse.builder()
+                .comment(commentEntity.getComment())
+                .rating(commentEntity.getRating())
+                .ownerName(commentEntity.getUser().getUsername())
+                .createdAt(commentEntity.getCreatedAt())
+                .build();
+    }
 
+    public CommentEntity mapToEntity(CommentResponse commentResponse){
+        CommentEntity commentEntity = new CommentEntity();
+        commentEntity.setComment(commentResponse.getComment());
+        commentEntity.setRating(commentEntity.getRating());
+        var user = userRepository.findByUsername(commentResponse.getOwnerName())
+                        .orElseThrow(()->new UserNotFoundException(
+                                MessageFormat.format(
+                                        "User with id: {0} not found",commentResponse.getOwnerName())
+                        ));
+        commentEntity.setUser(user);
+        commentEntity.setCreatedAt(LocalDateTime.now());
+        commentEntity.setUpdatedAt(LocalDateTime.now());
+        return commentEntity;
+    }
 
-    CommentResponse toResponse(CommentRequest commentRequest);
-
-    default ListCommentResponse toList(List<CommentEntity> comments){
+    public ListCommentResponse mapToDtoList(List<CommentEntity> comments){
         ListCommentResponse listCommentResponse = new ListCommentResponse();
-        listCommentResponse.setComments(comments.stream()
-                .map(this::toDto)
-                .toList());
+        listCommentResponse.setComments(comments.stream().map(this::mapToDto).toList());
         return listCommentResponse;
+    }
+
+    public List<CommentEntity> mapToEntityList(List<CommentResponse> commentResponses){
+        return commentResponses.stream().map(this::mapToEntity).toList();
+    }
+
+    public List<CommentResponse> mapToCommentResponseList(List<CommentEntity> comments){
+        return comments.stream().map(this::mapToDto).toList();
     }
 
 

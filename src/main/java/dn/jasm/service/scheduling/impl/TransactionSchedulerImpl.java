@@ -24,7 +24,7 @@ public class TransactionSchedulerImpl implements TransactionScheduler {
     private final TransactionRepository transactionRepository;
 
     @Override
-    @Scheduled(fixedDelay = 10000L)
+//    @Scheduled(fixedDelay = 10000L)
     @Transactional
     public void cleanCancelledTransactions() {
         Set<String> transactionsForDelete = transactionRepository.findAll()

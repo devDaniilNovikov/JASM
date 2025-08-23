@@ -41,7 +41,7 @@ public class CommentController {
     }
 
     @GetMapping(GET_COMMENTS_BY_USER)
-    public Map<String,List<CommentResponse>> getCommentsOfUserByUserId(@RequestParam Long userId){
+    public Map<String,ListCommentResponse> getCommentsOfUserByUserId(@RequestParam Long userId){
         return commentService.getCommentsByUserId(userId);
     }
 

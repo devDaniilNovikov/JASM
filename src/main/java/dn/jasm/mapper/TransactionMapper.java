@@ -11,8 +11,11 @@ import lombok.RequiredArgsConstructor;
 import org.hibernate.query.Order;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -71,6 +74,18 @@ public class TransactionMapper {
 
     public String mapToString(TransactionEntity tx){
         return String.valueOf(tx);
+    }
+
+    public LinkedHashSet<TransactionDto> mapToDtoSet(Set<TransactionEntity> transactions){
+        return transactions.stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    public LinkedHashSet<TransactionEntity> mapToEntitySet(Set<TransactionDto> transactions){
+        return transactions.stream()
+                .map(this::mapToEntityWithoutUserAndOrder)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
 }

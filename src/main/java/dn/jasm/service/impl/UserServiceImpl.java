@@ -5,16 +5,14 @@ import dn.jasm.configuration.aop.TimeResulting;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
-import dn.jasm.entity.CommentEntity;
-import dn.jasm.entity.OrderEntity;
-import dn.jasm.entity.CardEntity;
-import dn.jasm.entity.UserEntity;
+import dn.jasm.entity.*;
 import dn.jasm.event.UserCreateEvent;
 import dn.jasm.exception.AlreadyExistException;
 import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.UserMapper;
 import dn.jasm.repository.OrderRepository;
 import dn.jasm.configuration.redis.RedisService;
+import dn.jasm.repository.TransactionRepository;
 import dn.jasm.repository.UserRepository;
 import dn.jasm.entity.enums.UserStatus;
 import dn.jasm.event.UserUpdateEvent;
@@ -44,6 +42,7 @@ public class UserServiceImpl implements UserService {
     private final OrderRepository orderRepository;
     private final RedisService redisService;
     private final Map<String,Integer> userBanMap = new HashMap<>();
+    private final TransactionRepository transactionRepository;
 
 
     @Override
@@ -305,6 +304,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteUser(Long id) {
+        var user = userMapper.toEntity(findById(id));
+        var userTransactionIds = transactionRepository.findByUserEntityId(user.getId())
+                        .stream()
+                                .map(TransactionEntity::getId)
+                                        .toList();
+        userRepository.delete(user);
+        transactionRepository.deleteAllByIdInBatch(userTransactionIds);
         userRepository.findById(id).ifPresentOrElse(
                 userRepository::delete, ()->{
                     throw new UserNotFoundException(
@@ -317,7 +323,12 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteMultipleUsers(List<Long> ids) {
         var users = userRepository.findAllById(ids);
+        var userTransactionIds = users.stream()
+                         .map(UserEntity::getTransactionEntity)
+                         .map(TransactionEntity::getId)
+                         .toList();
         userRepository.deleteAllByIdInBatch(ids);
+        transactionRepository.deleteAllByIdInBatch(userTransactionIds);
         log.info("Deleted users: {}",users);
 
     }

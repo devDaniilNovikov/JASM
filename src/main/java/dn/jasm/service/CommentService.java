@@ -17,7 +17,7 @@ public interface CommentService {
 
     ListCommentResponse getCommentsWithPagination(int pageNumber, int pageSize);
 
-    Map<String,List<CommentResponse>> getCommentsByUserId(Long userId);
+    Map<String,ListCommentResponse> getCommentsByUserId(Long userId);
 
     void deleteComment(Long commentId);
 

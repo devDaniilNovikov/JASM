@@ -42,4 +42,6 @@ public class TransactionEntity extends BasedEntity {
                 ", transactionStatus=" + transactionStatus +
                 '}';
     }
+
+
 }
