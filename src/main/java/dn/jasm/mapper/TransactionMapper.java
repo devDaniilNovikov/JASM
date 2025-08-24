@@ -60,7 +60,7 @@ public class TransactionMapper {
                 .toList();
     }
 
-    private TransactionEntity mapToEntityWithoutUserAndOrder(TransactionDto transactionDto){
+    public TransactionEntity mapToEntityWithoutUserAndOrder(TransactionDto transactionDto){
         TransactionEntity transactionEntity = new TransactionEntity();
         transactionEntity.setId(transactionDto.getTxId());
         var user = userRepository.findById(transactionDto.getUserId()).orElseThrow(RuntimeException::new);

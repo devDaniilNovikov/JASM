@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dn.jasm.configuration.aop.Loggable;
+import dn.jasm.entity.TransactionEntity;
 import dn.jasm.entity.enums.TransactionStatus;
 import dn.jasm.event.CommentEvent;
 import dn.jasm.configuration.kafka.KafkaService;
@@ -12,6 +13,8 @@ import dn.jasm.event.MailMessageEvent;
 import dn.jasm.configuration.redis.RedisService;
 import dn.jasm.event.TransactionEvent;
 import dn.jasm.event.UserCreateEvent;
+import dn.jasm.mapper.TransactionMapper;
+import dn.jasm.repository.TransactionRepository;
 import dn.jasm.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +37,8 @@ public class EventService {
     private final RedisService redisService;
     private final TransactionService transactionService;
     private final UserRepository userRepository;
+    private final TransactionMapper transactionMapper;
+    private final TransactionRepository transactionRepository;
 
     @EventListener
     public void handleEvent(MailMessageEvent event){
@@ -43,6 +48,7 @@ public class EventService {
             log.info("Writed event to cache: {}",event.toString());
         }
     }
+
 
 //    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 //    public void handleTransactionEvent(TransactionEvent transactionEvent){
@@ -58,8 +64,14 @@ public class EventService {
 //    }
 
     @EventListener
-    public void setLog(TransactionEvent txEvent){
-        log.info("Cancelled transaction is: {}",txEvent.getTxId());
+    public void handleTxEvent(TransactionEvent txEvent){
+        TransactionEntity tx = transactionMapper.mapToEntityWithoutUserAndOrder(transactionService.getTransactionById(txEvent.getTxId()));
+        tx.setOrderEntity(null);
+        tx.setUserEntity(null);
+        tx.setTransactionStatus(TransactionStatus.CANCELLED);
+        tx.setCompletedAt(false);
+        transactionRepository.deleteById(tx.getId());
+        log.info("Handle event for delete tx:{}",txEvent.getTxId());
     }
 
 

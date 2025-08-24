@@ -18,7 +18,7 @@ import java.util.List;
 public class UserController {
 
     private static final String CREATE_USER = "/api/v1/user/create";
-    private static final String DELETE_USER = "/api/v1/user/{id}/delete";
+    private static final String DELETE_USER = "/api/v1/user/delete";
     private static final String GET_MULTIPLE_USERS_BY_IDS = "/api/v1/user/search";
     private static final String DELETE_USERS_BY_IDS = "/api/v1/users/delete";
     private static final String GET_ALL_USERS = "/api/v1/user/users-list";
@@ -43,7 +43,7 @@ public class UserController {
 
     @GetMapping(GET_USER_BY_ORDER_ID)
     @ResponseStatus(HttpStatus.OK)
-    @SwaggerAnnotationForUser(operation = "Получение пользователя по его уникальному идентификатору")
+    @SwaggerAnnotationForUser(operation = "Получение пользователя по уникальному идентификатору заказа")
     public UserResponse getUserByOrderId(@RequestParam Long orderId){
         return userService.getUserByOrderId(orderId);
     }
@@ -122,7 +122,7 @@ public class UserController {
     @DeleteMapping(DELETE_USER)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @SwaggerAnnotationForUser(operation = "Удаление пользователя по его уникальному идентификатору")
-    public void deleteUser(@PathVariable Long id){
+    public void deleteUser(@RequestParam Long id){
         userService.deleteUser(id);
     }
 

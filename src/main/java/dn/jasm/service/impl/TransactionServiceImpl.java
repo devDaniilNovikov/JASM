@@ -211,6 +211,25 @@ public class TransactionServiceImpl implements TransactionService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         return transactionMapper.mapToDtoSet(txSet);
     }
+
+    @Override
+    @Transactional
+    public void deleteTransaction(Long txId) {
+        var tx = transactionRepository.findById(txId).orElseThrow(RuntimeException::new);
+        // Сначала очищаем связи с User и Order
+        if (tx.getUserEntity() != null) {
+            tx.getUserEntity().setTransactionEntity(null);
+            tx.setUserEntity(null);
+        }
+        if (tx.getOrderEntity() != null) {
+            tx.getOrderEntity().setTransactionEntity(null);
+            tx.setOrderEntity(null);
+        }
+        // Сохраняем изменения перед удалением
+        transactionRepository.save(tx);
+        transactionRepository.delete(tx);
+        log.info("Deleted tx is: {}", tx.getId());
+    }
 }
 
 

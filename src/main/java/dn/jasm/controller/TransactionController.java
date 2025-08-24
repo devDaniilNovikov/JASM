@@ -22,8 +22,14 @@ public class TransactionController {
     private static final String CANCEL_TRANSACTION = "/api/v1/tx/cancel";
     private static final String CANCEL_MULTIPLE_TRANSACTIONS = "/api/v1/txs/cancel";
     private static final String GET_TRANSACTION_SET = "/api/v1/tx/all";
+    private static final String DELETE_TRANSACTION = "/api/v1/tx/delete";
 
     private final TransactionService transactionService;
+
+    @DeleteMapping(DELETE_TRANSACTION)
+    public void deleteTransaction(@RequestParam Long txId){
+        transactionService.deleteTransaction(txId);
+    }
 
 
     @PostMapping(value = CREATE_TRANSACTION,produces = MediaType.APPLICATION_JSON_VALUE,

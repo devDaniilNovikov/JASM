@@ -6,14 +6,13 @@ import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
 import dn.jasm.entity.*;
+import dn.jasm.event.TransactionEvent;
 import dn.jasm.event.UserCreateEvent;
 import dn.jasm.exception.AlreadyExistException;
 import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.UserMapper;
-import dn.jasm.repository.OrderRepository;
+import dn.jasm.repository.*;
 import dn.jasm.configuration.redis.RedisService;
-import dn.jasm.repository.TransactionRepository;
-import dn.jasm.repository.UserRepository;
 import dn.jasm.entity.enums.UserStatus;
 import dn.jasm.event.UserUpdateEvent;
 import dn.jasm.service.UserService;
@@ -43,6 +42,9 @@ public class UserServiceImpl implements UserService {
     private final RedisService redisService;
     private final Map<String,Integer> userBanMap = new HashMap<>();
     private final TransactionRepository transactionRepository;
+    private final CommentRepository commentRepository;
+    private final CardRepository cardRepository;
+    private final NotificationRepository notificationRepository;
 
 
     @Override
@@ -302,22 +304,46 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    @Override
+    @Transactional
     public void deleteUser(Long id) {
-        var user = userMapper.toEntity(findById(id));
-        var userTransactionIds = transactionRepository.findByUserEntityId(user.getId())
-                        .stream()
-                                .map(TransactionEntity::getId)
-                                        .toList();
-        userRepository.delete(user);
-        transactionRepository.deleteAllByIdInBatch(userTransactionIds);
-        userRepository.findById(id).ifPresentOrElse(
-                userRepository::delete, ()->{
-                    throw new UserNotFoundException(
-                    MessageFormat.format("User with id: {0} not found",id));
-        });
+        UserEntity user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(
+                        MessageFormat.format("User with id: {0} not found", id)));
 
+        if (user.getComments() != null) {
+            user.getComments().forEach(comment -> comment.setUser(null));
+            commentRepository.saveAll(user.getComments());
+            user.getComments().clear();
+        }
+        if (user.getCards() != null) {
+            user.getCards().forEach(card -> card.setUser(null));
+            cardRepository.saveAll(user.getCards());
+            user.getCards().clear();
+        }
+        if (user.getOrders() != null) {
+            user.getOrders().forEach(order -> order.setUser(null));
+            orderRepository.saveAll(user.getOrders());
+            user.getOrders().clear();
+        }
+        if (user.getNotifications() != null) {
+            user.getNotifications().forEach(notificationEntity -> notificationEntity.setUser(null));
+            notificationRepository.saveAll(user.getNotifications());
+            user.getNotifications().clear();
+        }
+        if (user.getTransactionEntity() != null) {
+            TransactionEntity transaction = user.getTransactionEntity();
+            transaction.getOrderEntity().setTransactionEntity(null);
+            transaction.getUserEntity().setTransactionEntity(null);
+            transaction.setUserEntity(null);
+            transaction.setOrderEntity(null);
+            transactionRepository.deleteById(transaction.getId());
+            log.info("Saved transaction: {}",transaction.getId());
+        }
+        userRepository.delete(user);
+        redisService.deleteCacheByKey(String.valueOf(user.getId()));
     }
+
+
 
     @Transactional
     @Override

@@ -22,4 +22,6 @@ public interface TransactionService {
 
     LinkedHashSet<TransactionDto> getTransactionSet(int pageNumber, int pageSize);
 
+    void deleteTransaction(Long txId);
+
 }

@@ -18,7 +18,7 @@ public class TransactionEntity extends BasedEntity {
 
 
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
     @JsonBackReference("user-transaction")
     private UserEntity userEntity;
