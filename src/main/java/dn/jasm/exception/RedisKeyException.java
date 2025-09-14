@@ -9,4 +9,7 @@ public class RedisKeyException extends RuntimeException{
     public RedisKeyException(String message) {
         super(message);
     }
+
+    public RedisKeyException() {
+    }
 }

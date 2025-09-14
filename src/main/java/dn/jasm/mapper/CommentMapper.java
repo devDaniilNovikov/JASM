@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -43,7 +44,7 @@ public class CommentMapper {
         return commentEntity;
     }
 
-    public ListCommentResponse mapToDtoList(List<CommentEntity> comments){
+    public ListCommentResponse mapToDtoSet(Set<CommentEntity> comments){
         ListCommentResponse listCommentResponse = new ListCommentResponse();
         listCommentResponse.setComments(comments.stream().map(this::mapToDto).toList());
         return listCommentResponse;

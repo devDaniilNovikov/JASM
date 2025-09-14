@@ -1,20 +1,17 @@
 package dn.jasm.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dn.jasm.configuration.aop.Loggable;
-import dn.jasm.configuration.redis.RedisService;
+import dn.jasm.entity.CardEntity;
+import dn.jasm.exception.CardNotFoundException;
+import dn.jasm.repository.CardRepository;
+import dn.jasm.service.RedisService;
 import dn.jasm.dto.transaction.TransactionDto;
 import dn.jasm.entity.OrderEntity;
 import dn.jasm.entity.TransactionEntity;
 import dn.jasm.entity.UserEntity;
-import dn.jasm.entity.enums.OrderStatus;
 import dn.jasm.entity.enums.TransactionStatus;
 import dn.jasm.event.TransactionEvent;
 import dn.jasm.exception.OrderNotFoundException;
-import dn.jasm.exception.RedisKeyException;
 import dn.jasm.exception.TransactionNotFoundException;
 import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.TransactionMapper;
@@ -26,17 +23,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.MessageFormat;
-import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,69 +38,98 @@ import java.util.stream.Collectors;
 @Slf4j
 public class TransactionServiceImpl implements TransactionService {
 
-    private final ApplicationEventPublisher eventPublisher;
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final CardRepository cardRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final RedisService redisService;
     private final TransactionMapper transactionMapper;
 
-    private final Set<TransactionEntity> txSet = new LinkedHashSet<>();
 
 
     @Override
     public TransactionDto getTransactionById(Long txId) {
-        return transactionMapper.mapToDto(
-                transactionRepository.findById(txId)
+        return transactionMapper.mapToDto(transactionRepository.findById(txId)
                         .orElseThrow(()->new TransactionNotFoundException(
                                 MessageFormat.format("Transaction with id: {0} not found",txId))));
     }
 
-    @Override
     @Transactional(isolation = Isolation.SERIALIZABLE)
-    public void createTransaction(TransactionDto transactionDto, Long userId) {
-        TransactionEntity transactionEntity = new TransactionEntity();
+    public void createTransaction(Long userId,
+                                  Long orderId,
+                                  Long cardId) {
         var user = userRepository.findById(userId)
-                .orElseThrow(RuntimeException::new);
-        var order = orderRepository.findById(transactionDto.getOrderId())
-                        .orElseThrow(RuntimeException::new);
+                        .orElseThrow(()->new UserNotFoundException(
+                         MessageFormat.format(
+                                 "User with id: {0} not found",userId)));
+        var order = orderRepository.findById(orderId)
+                        .orElseThrow(()->new OrderNotFoundException(
+                         MessageFormat.format(
+                                 "Order with id: {0} not found",orderId)));
+        var card = cardRepository.findById(cardId).orElseThrow(CardNotFoundException::new);
         validateTransactionBalance(user,order);
-        transactionEntity.setUserEntity(user);
-        transactionEntity.setOrderEntity(order);
-        transactionEntity.setCompletedAt(true);
-        order.setTransactionEntity(transactionEntity);
-        user.setTransactionEntity(transactionEntity);
-        transactionEntity.setTransactionStatus(TransactionStatus.COMPLETED);
-        transactionRepository.save(transactionEntity);
-        putToCache(transactionEntity);
-        publishTransactionEvent(transactionEntity);
-        log.info("Saved transaction is: {}",transactionEntity.getId());
-
-
-    }
-    private void putToCache(TransactionEntity transactionEntity) {
-        var txMappingValue = transactionMapper.mapToDto(transactionEntity);
-        var txCacheKey = Long.toString(transactionEntity.getId());
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        try {
-            var txCacheValue = objectMapper.writeValueAsString(txMappingValue);
-            redisService.writeObjectInRedis(txCacheKey, txCacheValue);
-        } catch (JsonProcessingException e) {
-            log.error("Can't serialize value: {}", e.getMessage());
-        }
+        var txDto = createTx(order,user,card);
+        publishEvent(txDto,order,user);
+        putToCache(txDto);
+        log.info("Created tx: {} for order: {} and user: {} with card: {}",
+                txDto.getTxId(),
+                order.getId(),
+                user.getId(),
+                card.getId());
     }
 
 
+    @Async
+    public void publishEvent(TransactionDto transactionDto,
+                              OrderEntity order,
+                              UserEntity user){
+        eventPublisher.publishEvent(new TransactionEvent(
+                this,
+                transactionDto.getTxId(),
+                user.getId(),
+                true,
+                order.getAmount(),
+                true,
+                order.getId(),
+                transactionDto.getCardId()
+        ));
+    }
+
+    private TransactionDto createTx(OrderEntity order, UserEntity user, CardEntity cardEntity){
+        TransactionEntity tx = new TransactionEntity();
+        tx.setTotalAmount(order.getAmount());
+        tx.setTransactionStatus(TransactionStatus.PROCESSING);
+        tx.setCompletedAt(true);
+        var card = cardRepository.findById(cardEntity.getId()).orElseThrow(CardNotFoundException::new);
+        tx.setOrderEntity(order);
+        order.setTransactionEntity(tx);
+        List<TransactionEntity> transactions = user.getTransactionEntity();
+        Set<TransactionEntity> transactionsSet = card.getTransactions();
+        transactions.add(tx);
+        transactionsSet.add(tx);
+        transactionRepository.save(tx);
+        tx.setUser(user);
+        tx.setCard(card);
+        userRepository.save(user);
+        orderRepository.save(order);
+        cardRepository.save(card);
+        return transactionMapper.mapToDto(tx);
+
+    }
 
 
-    private void validateTransactionBalance(UserEntity user,
+    private void putToCache(TransactionDto transactionDto) {
+        EventServiceImpl.putInRedis(transactionDto, redisService);
+    }
+
+    public void validateTransactionBalance(UserEntity user,
                                             OrderEntity order){
         var balance = user.getBalance();
         if (balance.compareTo(BigDecimal.ZERO)<=0){
             throw new IllegalArgumentException(
                     MessageFormat.format("Balance of user: {0} is null",user.getBalance()));
+
         }
         if (order.getAmount().compareTo(balance)>0){
             throw new IllegalArgumentException(
@@ -114,20 +137,11 @@ public class TransactionServiceImpl implements TransactionService {
                             "Insufficient balance {0} for order amount: {1}",
                             balance,order.getAmount()));
         }
-
     }
 
 
 
-    private void publishTransactionEvent(TransactionEntity transactionEntity){
-        eventPublisher.publishEvent(
-                new TransactionEvent(this,
-                        transactionEntity.getId(),
-                        transactionEntity.getUserEntity().getId(),
-                        true,
-                        transactionEntity.getUserEntity().getBalance(),
-                        true));
-    }
+
 
 
 
@@ -138,10 +152,10 @@ public class TransactionServiceImpl implements TransactionService {
         TransactionEntity transactionEntity = transactionRepository.findById(txId)
                 .orElseThrow(() -> new TransactionNotFoundException(
                         MessageFormat.format("Transaction with id: {0} not found", txId)));
-        if (transactionEntity.getUserEntity() != null) {
-            UserEntity user = transactionEntity.getUserEntity();
+        if (transactionEntity.getUser() != null) {
+            UserEntity user = transactionEntity.getUser();
             user.setTransactionEntity(null);
-            transactionEntity.setUserEntity(null);
+            transactionEntity.setUser(null);
             userRepository.save(user);
         }
         if (transactionEntity.getOrderEntity() != null) {
@@ -157,43 +171,22 @@ public class TransactionServiceImpl implements TransactionService {
 
 
 
-    @Override
-    @Transactional(isolation = Isolation.SERIALIZABLE,
-    rollbackFor = {TransactionNotFoundException.class,
-    UserNotFoundException.class,OrderNotFoundException.class},
-    propagation = Propagation.REQUIRES_NEW)
-    public boolean completeTransaction(Long txId, Long userId) {
-        return transactionRepository.findById(txId)
-                .stream()
-                .map(tx->{
-                    tx.setCompletedAt(true);
-                    tx.setTransactionStatus(TransactionStatus.COMPLETED);
-                    var user = userRepository.findById(userId)
-                            .orElseThrow(RuntimeException::new);
-                    var order = tx.getOrderEntity();
-                    tx.setUserEntity(user);
-                    tx.setOrderEntity(order);
-                    publishTransactionEvent(tx);
-                    putToCache(tx);
-                    transactionRepository.save(tx);
-                    return tx.getCompletedAt();
-                }).reduce(false,(t,f)-> true);
-    }
+
 
     @Override
     @Transactional
     @Loggable
     public void cancelMultipleTransactions(List<Long> txIds) {
-        List<TransactionEntity> requireTransactions = transactionRepository
-                .findAllById(txIds)
+        List<TransactionEntity> requireTransactions = transactionRepository.findAllById(txIds)
                 .stream()
                 .map(tx->{
                        tx.setTransactionStatus(TransactionStatus.CANCELLED);
                        tx.setOrderEntity(null);
-                       tx.setUserEntity(null);
-                       publishTransactionEvent(tx);
+                       tx.setUser(null);
+//                       publishTransactionEvent(tx);
                        return transactionRepository.save(tx);
-                       }).toList();
+                       })
+                .toList();
         transactionRepository.saveAll(requireTransactions);
         log.info("Cancelled transactions is: {}",requireTransactions);
 
@@ -204,10 +197,10 @@ public class TransactionServiceImpl implements TransactionService {
         if (pageSize==0){
             throw new IllegalArgumentException("PageSize can't be null");
         }
-        PageRequest pageRequest = PageRequest.of(pageNumber,pageSize);
+        PageRequest pageRequest = PageRequest.ofSize(pageSize).withPage(pageNumber);
         Set<TransactionEntity> txSet = transactionRepository.findAll(pageRequest)
                 .stream()
-                .sorted(Comparator.comparing(tx->tx.getUserEntity().getId()))
+                .sorted(Comparator.comparing(tx->tx.getUser().getId()))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         return transactionMapper.mapToDtoSet(txSet);
     }
@@ -215,17 +208,18 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public void deleteTransaction(Long txId) {
-        var tx = transactionRepository.findById(txId).orElseThrow(RuntimeException::new);
-        // Сначала очищаем связи с User и Order
-        if (tx.getUserEntity() != null) {
-            tx.getUserEntity().setTransactionEntity(null);
-            tx.setUserEntity(null);
+        var tx = transactionRepository.findById(txId)
+                .orElseThrow(RuntimeException::new);
+
+        if (tx.getUser() != null) {
+            tx.getUser().setTransactionEntity(null);
+            tx.setUser(null);
         }
+
         if (tx.getOrderEntity() != null) {
             tx.getOrderEntity().setTransactionEntity(null);
             tx.setOrderEntity(null);
         }
-        // Сохраняем изменения перед удалением
         transactionRepository.save(tx);
         transactionRepository.delete(tx);
         log.info("Deleted tx is: {}", tx.getId());

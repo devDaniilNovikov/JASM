@@ -1,5 +1,6 @@
 package dn.jasm.repository;
 import dn.jasm.entity.UserEntity;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
@@ -9,6 +10,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     @EntityGraph(attributePaths = {"orders,cards,comments"})
     Optional<UserEntity> findByUsername(String username);
+
+
+    @EntityGraph(attributePaths = "comments")
+    Optional<UserEntity> findById(Long id, PageRequest pageRequest);
 
     @EntityGraph(attributePaths = {"orders,cards,comments"})
     Optional<UserEntity> findByPhoneNumber(String phoneNumber);
@@ -20,7 +25,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     List<UserEntity> getAllByCountOfDealsNotNull();
 
     Optional<UserEntity> findByTransactionEntityId(Long txId);
-
 
     boolean findByEmail(String email);
 

@@ -1,21 +1,22 @@
-package dn.jasm.configuration.redis;
+package dn.jasm.service.impl;
 
 
 import dn.jasm.configuration.aop.Loggable;
-import dn.jasm.configuration.aop.TimeResulting;
 import dn.jasm.exception.RedisKeyException;
+import dn.jasm.service.RedisService;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.lang.ref.SoftReference;
 import java.text.MessageFormat;
-import java.time.Duration;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Service
@@ -23,32 +24,35 @@ import java.util.stream.IntStream;
 @Slf4j
 public class RedisServiceImpl implements RedisService {
 
-    private final RedisTemplate<String, Object> redisTemplate;
-    private static final int TTL = 10;
+    @Value("${spring.cache.redis.time-to-live}")
+    private Long TTL;
 
+    private final RedisTemplate<String, Object> redisTemplate;
 
 
     @Override
-    @Loggable
-    @TimeResulting
     public void writeObjectInRedis(String key, Object object) {
-        if (checkKeyExist(key)){
-            throw new RedisKeyException("Cache value by this keys already have in redis");
+        try {
+            if (!checkKeyExist(key)) {
+                redisTemplate.opsForValue().set(key, object);
+                redisTemplate.expire(key, TTL, TimeUnit.MINUTES);
+                log.info("Saving value: {} to cache with key: {}", object, key);
+            }
+        }catch (RedisKeyException e){
+            log.error("Key already have in redis: {}",e.getMessage());
         }
-        redisTemplate.opsForValue().set(key,object);
     }
 
 
 
 
-    @Loggable
     @Override
     @Transactional
-    public void writeObjectsInRedis(List<String> keys, List<Object> objects) {
+    public void writeObjectsInRedis(Set<String> keys, Set<Object> objects) {
         try {
-            List<String> existingKeys = keys.stream()
+            Set<String> existingKeys = keys.stream()
                     .filter(this::checkKeyExist)
-                    .toList();
+                    .collect(Collectors.toSet());
             if (!existingKeys.isEmpty()) {
                 throw new RedisKeyException(MessageFormat.format("Expiry keys : {0}",existingKeys));
             }
@@ -72,7 +76,7 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
-    public boolean checkKeysExist(List<String> keys){
+    public boolean checkKeysExist(Set<String> keys){
         if (keys.isEmpty()){
             throw new IllegalArgumentException("Keys can't be null!".toUpperCase());
         }
@@ -89,7 +93,7 @@ public class RedisServiceImpl implements RedisService {
             log.error("Key is null!");
             throw new IllegalArgumentException("Key can't b null");
         }
-        if (redisTemplate.opsForValue().get(key) == null){
+        if (redisTemplate.opsForValue().get(key) != null){
             redisTemplate.delete(key);
         }
     }
@@ -109,9 +113,12 @@ public class RedisServiceImpl implements RedisService {
         throw new RedisKeyException("Can't find key");
     }
 
+    @Transactional
     @Override
-    public void deleteCachesByKeys(List<String> keys) {
-        redisTemplate.delete(keys);
+    public void deleteCachesByKeys(Set<String> keys) {
+        if (redisTemplate.opsForValue().get(keys)!=null){
+            redisTemplate.delete(keys);
+        }
     }
 
 

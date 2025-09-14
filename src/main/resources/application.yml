@@ -12,7 +12,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: ${POSTGRES_USERNAME}
     password: ${POSTGRES_PASSWORD}
-    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/postgres
+    url: ${POSTGRES_URL}
 
   jpa:
     show-sql: false
@@ -37,6 +37,7 @@ spring:
       default-topic: ${KAFKA_TOPIC_NAME}
 
 
+
   mail:
    host: ${MAIL_HOST}
    port: ${MAIL_PORT}
@@ -59,8 +60,8 @@ spring:
     import: optional:file:.env[.properties]
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
+      host: localhost
+      port: 6379
       repositories:
         enabled: true
       lettuce:
@@ -70,7 +71,7 @@ spring:
   cache:
     type: redis
     redis:
-      time-to-live: 5m
+      time-to-live: 5
       enable-statistics: true
   threads:
     virtual:
@@ -100,5 +101,15 @@ account:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+open-api:
+  contact:
+    name: ${OPEN_API_CONTACT_NAME}
+    email: ${MAIL_USERNAME}
+  info:
+    title: ${OPEN_API_CONTACT_TITLE}
+    version: ${OPEN_API_CONTACT_VERSION}
+    description: ${OPEN_API_CONTACT_DESCRIPTION}
+  server:
+    description: ${OPEN_API_SERVER_DESCRIPTION}
 
 

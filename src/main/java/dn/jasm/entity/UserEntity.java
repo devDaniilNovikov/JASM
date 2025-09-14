@@ -3,10 +3,11 @@ package dn.jasm.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import lombok.*;
-import org.hibernate.annotations.BatchSize;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
@@ -34,11 +35,10 @@ public class UserEntity extends BasedEntity {
     @Column(unique = true,length = 11,nullable = false)
     private String phoneNumber;
 
-    @OneToOne(cascade = CascadeType.ALL,fetch = FetchType.LAZY,orphanRemoval = true)
-    @JoinColumn(name = "transaction_id")
-    @JsonManagedReference("user-transaction")
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    private TransactionEntity transactionEntity;
+    @OneToMany(cascade = CascadeType.ALL,fetch = FetchType.LAZY,orphanRemoval = true,mappedBy = "user")
+    @JsonManagedReference
+    @BatchSize(size = BATCH_SIZE)
+    private List<TransactionEntity> transactionEntity = new ArrayList<>();
 
     private String status;
 
@@ -51,6 +51,7 @@ public class UserEntity extends BasedEntity {
     @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
     @ToString.Exclude
     @BatchSize(size = BATCH_SIZE)
+    @JsonManagedReference
     private List<CardEntity> cards = new ArrayList<>();
 
     private Integer countOfDeals;
@@ -68,7 +69,6 @@ public class UserEntity extends BasedEntity {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDateTime banTime;
 
-
     private String email;
 
     private BigDecimal balance;
@@ -76,7 +76,6 @@ public class UserEntity extends BasedEntity {
 
     @Column(name = "payed_at")
     private Boolean isPayOnceOrder;
-
 
     public void addOrder(OrderEntity order){
         if (order!=null) orders.add(order);

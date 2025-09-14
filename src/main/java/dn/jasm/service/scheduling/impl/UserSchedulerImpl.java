@@ -40,7 +40,6 @@ public class UserSchedulerImpl implements UserScheduler {
 
 
     @Transactional
-    @Scheduled(fixedDelay = 100000L)
     @Override
     public void unbanUser() {
         List<UserEntity> bannedUsers = userRepository.findAllByStatus(UserStatus.ACTIVE.name())

@@ -8,16 +8,16 @@ import org.springframework.web.context.request.WebRequest;
 
 @RestControllerAdvice
 public class ControllerAdvice {
-
-    @ExceptionHandler(UserNotFoundException.class)
-    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, UserNotFoundException ex){
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ErrorBody.builder()
-                        .statusCode(HttpStatus.NOT_FOUND.value())
-                        .description(ex.getLocalizedMessage())
-                        .path(webRequest.getContextPath())
-                        .build());
-    }
+//
+//    @ExceptionHandler(UserNotFoundException.class)
+//    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, UserNotFoundException ex){
+//        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+//                .body(ErrorBody.builder()
+//                        .statusCode(HttpStatus.NOT_FOUND.value())
+//                        .description(ex.getLocalizedMessage())
+//                        .path(webRequest.getContextPath())
+//                        .build());
+//    }
 
     @ExceptionHandler(AlreadyExistException.class)
     private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, AlreadyExistException ex) {
@@ -30,15 +30,15 @@ public class ControllerAdvice {
     }
 
 
-    @ExceptionHandler(Exception.class)
-    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, Exception ex){
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ErrorBody.builder()
-                        .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                        .description(ex.getMessage())
-                        .path(webRequest.getDescription(false))
-                        .build());
-    }
+//    @ExceptionHandler(Exception.class)
+//    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, Exception ex){
+//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                .body(ErrorBody.builder()
+//                        .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+//                        .description(ex.getMessage())
+//                        .path(webRequest.getDescription(false))
+//                        .build());
+//    }
 }
 
 

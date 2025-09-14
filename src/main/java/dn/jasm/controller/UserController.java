@@ -4,6 +4,8 @@ import dn.jasm.configuration.swagger.user.SwaggerAnnotationForUserCollection;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
+import dn.jasm.entity.TransactionEntity;
+import dn.jasm.entity.UserEntity;
 import dn.jasm.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -31,8 +33,22 @@ public class UserController {
     private static final String GET_USER_COUNTS_OF_DEALS  = "/api/v1/users/deals/count";
     private static final String GET_USER_BY_ORDER_ID = "/api/v1/user/by-orderId";
     private static final String GET_USER_WITH_NOT_NULL_COUNT_OF_DEALS = "/api/v1/users/deals";
+    private static final String GET_TRANSACTIONS_OF_USER = "/api/v1/user/transactions";
+    private static final String GET_CARDS_OF_USER = "/api/v1/user/cards";
 
     private final UserService userService;
+
+    @GetMapping(GET_CARDS_OF_USER)
+    public UserResponse getCardList(@RequestParam Long userId){
+        return userService.getCardsOfUser(userId);
+    }
+
+
+
+    @GetMapping(GET_TRANSACTIONS_OF_USER)
+    public UserResponse getUserTransactions(@RequestParam Long userId){
+        return userService.getUserTransactions(userId);
+    }
 
     @GetMapping(GET_USER_WITH_NOT_NULL_COUNT_OF_DEALS)
     @ResponseStatus(HttpStatus.OK)
@@ -50,7 +66,7 @@ public class UserController {
 
     @GetMapping(GET_USER_COUNTS_OF_DEALS)
     @ResponseStatus(HttpStatus.ACCEPTED)
-    @SwaggerAnnotationForUser(operation = "Получение пользователя и его количества сделок")
+    @SwaggerAnnotationForUser(operation = "Получение пользователя и его количество сделок")
     public UserResponse getCountsOfDealsOfUsers(){
         return userService.getUsersCountsOfDeals();
     }

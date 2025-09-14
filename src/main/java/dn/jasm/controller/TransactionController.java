@@ -23,20 +23,28 @@ public class TransactionController {
     private static final String CANCEL_MULTIPLE_TRANSACTIONS = "/api/v1/txs/cancel";
     private static final String GET_TRANSACTION_SET = "/api/v1/tx/all";
     private static final String DELETE_TRANSACTION = "/api/v1/tx/delete";
+    private static final String GET_TRANSACTION_BY_ID = "/api/v1/tx/get/{id}";
 
     private final TransactionService transactionService;
 
     @DeleteMapping(DELETE_TRANSACTION)
+    @SwaggerAnnotationForTransaction(operation = "Удаление транзакции по ее уникальному идентификатору")
     public void deleteTransaction(@RequestParam Long txId){
         transactionService.deleteTransaction(txId);
     }
 
+    @GetMapping(GET_TRANSACTION_BY_ID)
+    public TransactionDto getById(@PathVariable Long id){
+        return transactionService.getTransactionById(id);
+    }
 
-    @PostMapping(value = CREATE_TRANSACTION,produces = MediaType.APPLICATION_JSON_VALUE,
-    consumes = MediaType.APPLICATION_JSON_VALUE)
+
+    @PostMapping(CREATE_TRANSACTION)
     @SwaggerAnnotationForTransaction(operation = "Создание транзакции")
-    public void createTransaction(@RequestBody TransactionDto transactionDto, @RequestParam Long userId){
-        transactionService.createTransaction(transactionDto, userId);
+    public void createTransaction(@RequestParam Long userId,
+                                  @RequestParam Long orderId,
+                                  @RequestParam Long cardId){
+        transactionService.createTransaction(userId, orderId,cardId);
     }
 
     @PatchMapping(value = CANCEL_TRANSACTION,produces = MediaType.APPLICATION_JSON_VALUE)
@@ -57,6 +65,7 @@ public class TransactionController {
                                                                @RequestParam int pageSize){
         return transactionService.getTransactionSet(pageNumber, pageSize);
     }
+
 
 
 }

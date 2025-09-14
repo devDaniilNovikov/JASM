@@ -29,7 +29,7 @@ public class SenderService {
     private final ApplicationEventPublisher eventPublisher;
 
 
-    @Async
+
     public void sendMessage(String to, String content) throws MailException{
             try {
                 SimpleMailMessage message = new SimpleMailMessage();

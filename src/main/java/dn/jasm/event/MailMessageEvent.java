@@ -15,7 +15,10 @@ public class MailMessageEvent extends ApplicationEvent {
     private LocalDateTime createdAt;
     private String to;
 
-    public MailMessageEvent(Object source,String content,LocalDateTime createdAt,String to) {
+    public MailMessageEvent(Object source,
+                            String content,
+                            LocalDateTime createdAt,
+                            String to) {
         super(source);
         this.content = content;
         this.createdAt = createdAt;

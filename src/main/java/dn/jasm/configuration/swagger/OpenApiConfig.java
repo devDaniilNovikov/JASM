@@ -17,22 +17,39 @@ public class OpenApiConfig {
     @Value("${server.port}")
     private String serverPort;
 
+    @Value("${open-api.contact.name}")
+    private String contactName;
+
+    @Value("${open-api.contact.email}")
+    private String email;
+
+    @Value("${open-api.info.description}")
+    private String description;
+
+    @Value("${open-api.info.title}")
+    private String title;
+
+    @Value("${open-api.info.version}")
+    private String apiVersion;
+
+    @Value("${open-api.server.description}")
+    private String serverDescription;
+
+
     @Bean
     public OpenAPI openAPIClient() {
         Server server = new Server();
         server.setUrl("http://localhost:" + serverPort);
-        server.setDescription("Local server");
+        server.setDescription(serverDescription);
         Contact contact = new Contact();
-
+        contact.setName(contactName);
+        contact.setEmail(email);
         Info info = new Info()
-                .title("Маркетплейс")
-                .version("1.0.0")
-                .description("Документация для API маркетплейса")
-                .contact(new Contact()
-                        .name("Daniil")
-                        .email("novikovdanila7@gmail.com"));
-        return new OpenAPI()
-                .info(info)
+                .title(title)
+                .version(apiVersion)
+                .description(description)
+                .contact(contact);
+        return new OpenAPI().info(info)
                 .servers(List.of(server));
     }
 

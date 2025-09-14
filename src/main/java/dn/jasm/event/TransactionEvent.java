@@ -17,6 +17,8 @@ public class TransactionEvent extends ApplicationEvent {
     private Boolean payedAt;
     private BigDecimal totalAmount;
     private Boolean completedAt;
+    private Long orderId;
+    private Long cardId;
 
 
     public TransactionEvent(Object source,
@@ -24,13 +26,17 @@ public class TransactionEvent extends ApplicationEvent {
                             Long userId,
                             Boolean payedAt,
                             BigDecimal totalAmount,
-                            Boolean completedAt) {
+                            Boolean completedAt,
+                            Long orderId,
+                            Long cardId) {
         super(source);
         this.txId = txId;
         this.userId = userId;
         this.payedAt = payedAt;
         this.totalAmount = totalAmount;
         this.completedAt = completedAt;
+        this.orderId = orderId;
+        this.cardId = cardId;
 
     }
 }

@@ -14,7 +14,8 @@ public class UserCreateEvent extends ApplicationEvent {
 
     private String username;
     private String phoneNumber;
-    private LocalDateTime createdAt;
+    private LocalDateTime timeStamp;
+    private String userId;
 
     @Override
     public String toString() {
@@ -24,10 +25,15 @@ public class UserCreateEvent extends ApplicationEvent {
                 '}';
     }
 
-    public UserCreateEvent(Object source, String username, String phoneNumber, LocalDateTime createdAt) {
+    public UserCreateEvent(Object source,
+                           String username,
+                           String phoneNumber,
+                           LocalDateTime timeStamp,
+                           String userId) {
         super(source);
         this.username = username;
         this.phoneNumber = phoneNumber;
-        this.createdAt = createdAt;
+        this.timeStamp = timeStamp;
+        this.userId = userId;
     }
 }

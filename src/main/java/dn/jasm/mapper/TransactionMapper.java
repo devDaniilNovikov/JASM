@@ -24,26 +24,14 @@ public class TransactionMapper {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
 
-
-
-    public TransactionEntity mapToEntity(TransactionDto transactionDto,
-                                         UserEntity user,
-                                         OrderEntity order){
-        TransactionEntity transactionEntity = new TransactionEntity();
-        transactionEntity.setId(transactionDto.getTxId());
-        transactionEntity.setCompletedAt(true);
-        transactionEntity.setUserEntity(user);
-        transactionEntity.setOrderEntity(order);
-        transactionEntity.setTransactionStatus(TransactionStatus.COMPLETED);
-        return transactionEntity;
-    }
-
     public TransactionDto mapToDto(TransactionEntity transactionEntity){
         return TransactionDto.builder()
-                .txId(transactionEntity.getId())
-                .userId(transactionEntity.getUserEntity().getId())
+                .txId(Long.valueOf(String.valueOf(transactionEntity.getId())))
+                .userId(transactionEntity.getUser().getId())
                 .orderId(transactionEntity.getOrderEntity().getId())
-                .balance(transactionEntity.getOrderEntity().getAmount())
+                .cardId(transactionEntity.getCard().getId())
+                .amount(transactionEntity.getOrderEntity().getAmount())
+                .transactionStatus(TransactionStatus.COMPLETED)
                 .completedAt(true)
                 .build();
     }
@@ -63,9 +51,11 @@ public class TransactionMapper {
     public TransactionEntity mapToEntityWithoutUserAndOrder(TransactionDto transactionDto){
         TransactionEntity transactionEntity = new TransactionEntity();
         transactionEntity.setId(transactionDto.getTxId());
-        var user = userRepository.findById(transactionDto.getUserId()).orElseThrow(RuntimeException::new);
-        var order = orderRepository.findById(transactionDto.getOrderId()).orElseThrow(RuntimeException::new);
-        transactionEntity.setUserEntity(user);
+        var user = userRepository.findById(transactionDto.getUserId())
+                .orElseThrow(RuntimeException::new);
+        var order = orderRepository.findById(transactionDto.getOrderId())
+                .orElseThrow(RuntimeException::new);
+        transactionEntity.setUser(user);
         transactionEntity.setOrderEntity(order);
         transactionEntity.setCompletedAt(true);
         transactionEntity.setTransactionStatus(TransactionStatus.COMPLETED);

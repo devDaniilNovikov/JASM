@@ -1,4 +1,4 @@
-package dn.jasm.configuration.redis;
+package dn.jasm.service;
 import java.util.List;
 import java.util.Set;
 
@@ -6,11 +6,11 @@ public interface RedisService {
 
     void writeObjectInRedis(String key, Object object);
 
-    void writeObjectsInRedis(List<String> keys, List<Object> objects);
+    void writeObjectsInRedis(Set<String> keys, Set<Object> objects);
 
     boolean checkKeyExist(String key);
 
-    boolean checkKeysExist(List<String> keys);
+    boolean checkKeysExist(Set<String> keys);
 
     void deleteCacheByKey(String key);
 
@@ -18,7 +18,7 @@ public interface RedisService {
 
     Set<String> getKeySet(String keyPattern);
 
-    void deleteCachesByKeys(List<String> keys);
+    void deleteCachesByKeys(Set<String> keys);
 
 
 

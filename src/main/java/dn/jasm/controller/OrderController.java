@@ -1,6 +1,7 @@
 package dn.jasm.controller;
 
 import dn.jasm.dto.order.ListOrderResponse;
+import dn.jasm.dto.order.OrderMapResponse;
 import dn.jasm.dto.order.OrderResponse;
 import dn.jasm.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ public class OrderController {
     private final OrderService orderService;
 
     @GetMapping(GET_ORDER_LIST)
-    public Map<String, ListOrderResponse> getOrderListOfUser(@RequestParam Long userId){
+    public OrderMapResponse getOrderListOfUser(@RequestParam Long userId){
         return orderService.getOrderListOfUser(userId);
     }
 }

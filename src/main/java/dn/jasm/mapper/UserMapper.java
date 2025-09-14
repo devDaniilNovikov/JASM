@@ -1,34 +1,34 @@
 package dn.jasm.mapper;
-import dn.jasm.entity.UserEntity;
+
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Mappings;
+import dn.jasm.entity.UserEntity;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 
-@Mapper(componentModel = "spring")
-public interface UserMapper extends Mappable<UserEntity, UserResponse> {
+@Component
+public class UserMapper {
 
-    default UserResponseList toList(List<UserEntity> userEntityList){
-        UserResponseList userResponseList = new UserResponseList();
-        userResponseList.setUsers(userEntityList.stream()
-                .map(this::toDto)
-                .toList());
-        return userResponseList;
+
+    public UserResponse mapToDto(UserEntity user){
+        return UserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .userStatus(user.getStatus())
+                .build();
     }
 
-    @Override
-    @Mappings({
-            @Mapping(target = "password", source = "password", ignore = true),
-            @Mapping(target = "users", ignore = true),
-            @Mapping(target = "userStatus", source = "status"),
-            @Mapping(target = "comments",source = "comments",ignore = true)
-    })
-    UserResponse toDto(UserEntity entity);
-
-    default String mapUserIdToString(Long id){
-        return Objects.toString(id);
+    public UserResponseList mapToDtoList(List<UserEntity> users){
+        UserResponseList userResponseList = new UserResponseList();
+        userResponseList.setUsers(users.stream()
+                .map(this::mapToDto)
+                .toList());
+        return userResponseList;
     }
 }

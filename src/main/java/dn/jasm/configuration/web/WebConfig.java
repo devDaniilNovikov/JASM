@@ -1,4 +1,4 @@
-package dn.jasm.configuration;
+package dn.jasm.configuration.web;
 
 
 import org.springframework.context.annotation.Bean;
@@ -13,6 +13,5 @@ public class WebConfig {
         return RestClient.builder()
                 .build();
     }
-
 
 }

@@ -1,10 +1,10 @@
 package dn.jasm.service.impl;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.stripe.model.Price;
-import dn.jasm.configuration.aop.Loggable;
-import dn.jasm.configuration.aop.TimeResulting;
-import dn.jasm.configuration.redis.RedisService;
+import dn.jasm.dto.order.OrderMapResponse;
+import dn.jasm.service.RedisService;
 import dn.jasm.dto.order.ListOrderResponse;
 import dn.jasm.dto.order.OrderResponse;
 import dn.jasm.entity.OrderEntity;
@@ -15,20 +15,14 @@ import dn.jasm.entity.ItemEntity;
 import dn.jasm.mapper.ItemMapper;
 import dn.jasm.mapper.OrderMapper;
 import dn.jasm.entity.enums.OrderStatus;
-import dn.jasm.mapper.UserMapper;
 import dn.jasm.repository.ItemRepository;
 import dn.jasm.repository.OrderRepository;
 import dn.jasm.entity.UserEntity;
 import dn.jasm.repository.UserRepository;
-import dn.jasm.service.ItemService;
 import dn.jasm.service.OrderService;
 import dn.jasm.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheConfig;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,9 +30,6 @@ import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @Slf4j
 @Service
@@ -50,7 +41,6 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final ItemMapper itemMapper;
     private final UserService userService;
-    private final UserMapper userMapper;
     private final OrderMapper orderMapper;
     private final RedisService redisService;
 
@@ -151,7 +141,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Map<String, ListOrderResponse> getOrderListOfUser(Long userId) {
+    public OrderMapResponse getOrderListOfUser(Long userId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(
                         MessageFormat.format("User with ID: {0} not found", userId)));
@@ -162,12 +152,14 @@ public class OrderServiceImpl implements OrderService {
         String username = user.getUsername();
         orderWithUsernameOfOwner.put(username,listOrderResponse);
         ListOrderResponse cacheValue = orderWithUsernameOfOwner.get(username);
+        OrderMapResponse orderMapResponse = new OrderMapResponse();
+        orderMapResponse.setOrderMap(orderWithUsernameOfOwner);
         try {
             redisService.writeObjectInRedis(username, cacheValue);
         }catch (RedisKeyException e){
             log.error("This key already put in redis: {}",username);
         }
-        return orderWithUsernameOfOwner;
+        return orderMapResponse;
     }
 
 

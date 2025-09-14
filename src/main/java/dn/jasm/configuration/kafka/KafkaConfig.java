@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.config.TopicConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.LoggerFactory;
@@ -21,11 +22,14 @@ import org.springframework.kafka.support.converter.JsonMessageConverter;
 import org.springframework.kafka.support.converter.RecordMessageConverter;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.springframework.kafka.transaction.KafkaTransactionManager;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import reactor.kafka.sender.KafkaSender;
+import reactor.kafka.sender.SenderOptions;
 
+import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
 @Slf4j
 @Configuration
@@ -44,7 +48,10 @@ public class KafkaConfig {
         producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,bootstrapServerValue);
-        return new DefaultKafkaProducerFactory<>(producerProperties);
+        producerProperties.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG,"tx-");
+        DefaultKafkaProducerFactory<String,Object> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties);
+        kafkaProducerFactory.setTransactionIdPrefix("tx-");
+        return kafkaProducerFactory;
     }
 
     @Bean
@@ -72,11 +79,30 @@ public class KafkaConfig {
     @Bean
     public NewTopic newTopic(){
         return TopicBuilder.name(topicName)
-                .partitions(1)
+                .partitions(5)
                 .replicas(1)
-                .compact()
+                .config(TopicConfig.RETENTION_MS_CONFIG,
+                 String.valueOf(Duration.ofDays(14)
+                .toMillis()))
                 .build();
     }
+
+    @Bean
+    public SenderOptions<String,Object> senderOptions(){
+        Map<String,Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,bootstrapServerValue);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,JsonSerializer.class);
+        props.put(ProducerConfig.BATCH_SIZE_CONFIG,10);
+        return SenderOptions.create(props);
+    }
+
+    @Bean
+    public KafkaSender<String,Object> kafkaSender(){
+        return KafkaSender.create(senderOptions());
+    }
+
+
 
     @Bean
     public RecordMessageConverter recordMessageConverter(){
@@ -87,5 +113,13 @@ public class KafkaConfig {
     public BatchMessagingMessageConverter batchMessagingMessageConverter(){
         return new BatchMessagingMessageConverter(recordMessageConverter());
     }
+//
+//    @Bean(name = "transactionManager")
+//    public KafkaTransactionManager<String,Object> kafkaTransactionManager(ProducerFactory<String,Object> producerFactory){
+//        KafkaTransactionManager<String,Object> kafkaTransactionManager = new KafkaTransactionManager<>(producerFactory);
+//        kafkaTransactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_ON_ACTUAL_TRANSACTION);
+//        return kafkaTransactionManager;
+//
+//    }
 }
 

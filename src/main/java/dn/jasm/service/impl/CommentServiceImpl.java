@@ -8,14 +8,12 @@ import dn.jasm.configuration.aop.TimeResulting;
 import dn.jasm.dto.comment.CommentRequest;
 import dn.jasm.dto.comment.CommentResponse;
 import dn.jasm.dto.comment.ListCommentResponse;
-import dn.jasm.entity.UserEntity;
-import dn.jasm.event.CommentEvent;
 import dn.jasm.exception.CommentNotFoundException;
 import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.CommentMapper;
 import dn.jasm.repository.CommentRepository;
 import dn.jasm.repository.UserRepository;
-import dn.jasm.configuration.redis.RedisService;
+import dn.jasm.service.RedisService;
 import dn.jasm.entity.CommentEntity;
 import dn.jasm.service.CommentService;
 import lombok.RequiredArgsConstructor;
@@ -67,10 +65,10 @@ public class CommentServiceImpl implements CommentService {
         comments.add(comment);
         commentRepository.save(comment);
         var commentKey = mapObjectToString(comment.getRating());
-        redisService.writeObjectInRedis(commentKey,comment);
-        eventPublisher.publishEvent(new CommentEvent(this, commentRequest.getComment(),
-                        commentRequest.getRating(),LocalDateTime.now())
-        );
+//        redisService.writeObjectInRedis(commentKey,comment);
+//        eventPublisher.publishEvent(new CommentEvent(this, commentRequest.getComment(),
+//                        commentRequest.getRating(),LocalDateTime.now())
+//        );
         comment.setUser(user);
         userRepository.save(user);
         log.info("User with username: {} add comment: {}", user.getUsername(), commentRequest.getComment());
@@ -104,8 +102,8 @@ public class CommentServiceImpl implements CommentService {
         log.info("Comments: {}",comments.toString());
         var keyOfComments = comments.stream()
                 .map(c->c.getId().toString())
-                .toList();
-        List<Object> commentValues = Collections.singletonList(comments);
+                .collect(Collectors.toSet());
+        Set<Object> commentValues = new HashSet<>(comments);
             redisService.writeObjectsInRedis(keyOfComments, commentValues);
 
         return commentMapper.mapToCommentResponseList(comments);
@@ -118,16 +116,16 @@ public class CommentServiceImpl implements CommentService {
         var pageRequest = PageRequest.of(pageNumber, pageSize);
         var commentsPage = commentRepository.findAll(pageRequest);
 
-        var comments = commentsPage.getContent();
+        var comments = new HashSet<>(commentsPage.getContent());
         var commentIds = comments.stream()
                 .map(comment -> comment.getId().toString())
-                .toList();
+                .collect(Collectors.toSet());
 
         if (!commentIds.isEmpty()) {
-            redisService.writeObjectsInRedis(commentIds, Collections.singletonList(comments));
+            redisService.writeObjectsInRedis(commentIds, Collections.singleton(comments));
         }
 
-        return commentMapper.mapToDtoList(comments);
+        return commentMapper.mapToDtoSet(comments);
     }
 
     @Override

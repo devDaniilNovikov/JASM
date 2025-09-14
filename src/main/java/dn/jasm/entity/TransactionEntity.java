@@ -10,22 +10,30 @@ import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @Entity
 @Table(schema = "jasm",name = "transactions")
-public class TransactionEntity extends BasedEntity {
+public class TransactionEntity extends BasedEntity{
 
 
-
-    @OneToOne(cascade = CascadeType.ALL)
+    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
-    @JsonBackReference("user-transaction")
-    private UserEntity userEntity;
+    @JsonBackReference
+    private UserEntity user;
+
+    @ManyToOne(cascade = {CascadeType.PERSIST,CascadeType.PERSIST,CascadeType.DETACH})
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JsonBackReference
+    @JoinColumn(name = "card_id")
+    private CardEntity card;
 
     @OneToOne
     @JoinColumn(name = "order_id")
     @OnDelete(action = OnDeleteAction.CASCADE)
+    @JsonBackReference("order-tx")
     private OrderEntity orderEntity;
 
     private Boolean completedAt;
@@ -33,15 +41,11 @@ public class TransactionEntity extends BasedEntity {
     @Enumerated(EnumType.STRING)
     private TransactionStatus transactionStatus;
 
-    @Override
-    public String toString() {
-        return "TransactionEntity{" +
-                "userEntity=" + userEntity +
-                ", orderEntity=" + orderEntity +
-                ", completedAt=" + completedAt +
-                ", transactionStatus=" + transactionStatus +
-                '}';
-    }
+    private BigDecimal totalAmount;
+
+
+
+
 
 
 }

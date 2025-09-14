@@ -37,6 +37,7 @@ dependencies {
     implementation("org.springframework.integration:spring-integration-mail")
     implementation("org.springframework.integration:spring-integration-redis")
     implementation ("com.stripe:stripe-java:24.0.0")
+    implementation ("io.projectreactor.kafka:reactor-kafka:1.3.21")
     // https://mvnrepository.com/artifact/com.google.guava/guava
     implementation("com.google.guava:guava:33.4.8-jre")
     implementation("com.ea.async:ea-async:1.2.3")
@@ -53,7 +54,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     // https://mvnrepository.com/artifact/org.postgresql/postgresql
     implementation("org.postgresql:postgresql:42.7.7")
-    compileOnly("org.projectlombok:lombok")
+    implementation ("redis.clients:jedis:5.1.0")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
+    implementation("org.springframework.integration:spring-integration-websocket")
+    implementation("org.springframework.integration:spring-integration-stomp")
+    // https://mvnrepository.com/artifact/com.speedment.jpastreamer/jpastreamer-core
     runtimeOnly("org.postgresql:postgresql:42.7.7")
     annotationProcessor("org.projectlombok:lombok")
     compileOnly("org.projectlombok:lombok")
@@ -64,8 +69,10 @@ dependencies {
     testImplementation("org.springframework.integration:spring-integration-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+

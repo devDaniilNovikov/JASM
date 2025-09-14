@@ -40,6 +40,7 @@ public class OrderEntity extends BasedEntity {
 
     @OneToOne(cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_id")
+    @JsonManagedReference
     @OnDelete(action = OnDeleteAction.CASCADE)
     private TransactionEntity transactionEntity;
 
