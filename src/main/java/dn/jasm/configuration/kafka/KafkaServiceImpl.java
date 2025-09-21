@@ -1,33 +1,14 @@
 package dn.jasm.configuration.kafka;
 
-import com.ea.async.Async;
-import dn.jasm.event.UserCreateEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.KafkaException;
-import org.apache.kafka.common.config.TopicConfig;
-import org.apache.kafka.common.protocol.types.Field;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.kafka.sender.KafkaSender;
-import reactor.kafka.sender.SenderOptions;
 import reactor.kafka.sender.SenderRecord;
-
-import static com.ea.async.Async.*;
-import static com.ea.async.Async.await;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.Collectors;
-
-import java.util.Objects;
 
 @Service
 @Slf4j

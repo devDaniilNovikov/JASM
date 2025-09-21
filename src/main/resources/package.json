@@ -1,0 +1,9 @@
+{
+  "txId": 35,
+  "userId": 1,
+  "balance": 1000.00,
+  "orderId": 27,
+  "completedAt": true,
+  "transactionStatus": "COMPLETED",
+  "array": []
+}

@@ -1,4 +1,4 @@
-package dn.jasm.event;
+package dn.jasm.event.user;
 
 import lombok.*;
 import org.springframework.context.ApplicationEvent;
@@ -14,7 +14,11 @@ public class UserUpdateEvent extends ApplicationEvent {
     private LocalDateTime updatedAt;
     private Boolean isUpdate;
 
-    public UserUpdateEvent(Object source,String username,String phoneNumber,LocalDateTime updatedAt,Boolean isUpdate) {
+    public UserUpdateEvent(Object source,
+                           String username,
+                           String phoneNumber,
+                           LocalDateTime updatedAt,
+                           Boolean isUpdate) {
         super(source);
         this.username = username;
         this.phoneNumber = phoneNumber;

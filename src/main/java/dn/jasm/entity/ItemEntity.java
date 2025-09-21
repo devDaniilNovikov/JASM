@@ -28,6 +28,8 @@ public class ItemEntity extends BasedEntity {
 
     private BigDecimal price;
 
+    private String description;
+
     private String type;
 
     private Double rating;
@@ -40,7 +42,9 @@ public class ItemEntity extends BasedEntity {
     @JoinColumn(name = "warehouse_id")
     private WareHouseEntity wareHouse;
 
-    private Integer sale;
+    private Integer discount;
+
+    private Boolean isShippable;
 
     private Integer quantity;
 
@@ -60,14 +64,18 @@ public class ItemEntity extends BasedEntity {
     @Override
     public String toString() {
         return "ItemEntity{" +
-                "category=" + category +
-                ", order=" + order +
+                "order=" + order +
                 ", name='" + name + '\'' +
                 ", photoUrls=" + photoUrls +
                 ", price=" + price +
+                ", description='" + description + '\'' +
                 ", type='" + type + '\'' +
+                ", rating=" + rating +
+                ", category=" + category +
                 ", wareHouse=" + wareHouse +
-                ", sale=" + sale +
+                ", discount=" + discount +
+                ", isShippable=" + isShippable +
+                ", quantity=" + quantity +
                 '}';
     }
 }

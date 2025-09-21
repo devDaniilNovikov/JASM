@@ -2,6 +2,7 @@ package dn.jasm.controller;
 
 import dn.jasm.configuration.swagger.transaction.SwaggerAnnotationForTransaction;
 import dn.jasm.configuration.swagger.transaction.SwaggerAnnotationForTransactionCollection;
+import dn.jasm.dto.transaction.SetTransactionDto;
 import dn.jasm.dto.transaction.TransactionDto;
 import dn.jasm.service.TransactionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,9 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 @RestController
 @RequiredArgsConstructor
@@ -61,8 +60,8 @@ public class TransactionController {
 
     @GetMapping(value = GET_TRANSACTION_SET,produces = MediaType.APPLICATION_JSON_VALUE)
     @SwaggerAnnotationForTransactionCollection(operation = "Получение транзакций постранично")
-    public LinkedHashSet<TransactionDto> findAllWithPagination(@RequestParam int pageNumber,
-                                                               @RequestParam int pageSize){
+    public SetTransactionDto findAllWithPagination(@RequestParam int pageNumber,
+                                                   @RequestParam int pageSize){
         return transactionService.getTransactionSet(pageNumber, pageSize);
     }
 

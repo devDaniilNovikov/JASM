@@ -5,8 +5,7 @@ import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
 import dn.jasm.entity.*;
-import dn.jasm.event.MailMessageEvent;
-import dn.jasm.event.UserCreateEvent;
+import dn.jasm.event.user.UserCreateEvent;
 import dn.jasm.exception.AlreadyExistException;
 import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.CardMapper;
@@ -14,12 +13,10 @@ import dn.jasm.mapper.UserMapper;
 import dn.jasm.repository.*;
 import dn.jasm.service.RedisService;
 import dn.jasm.entity.enums.UserStatus;
-import dn.jasm.event.UserUpdateEvent;
+import dn.jasm.event.user.UserUpdateEvent;
 import dn.jasm.service.UserService;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.util.threads.TaskThreadFactory;
 import org.hibernate.Hibernate;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
@@ -29,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
@@ -149,7 +145,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     @TimeResulting
-    @SneakyThrows
+
     public UserResponse createUser(UserRequest userRequest) {
             UserEntity user = new UserEntity();
             user.setUsername(userRequest.getUsername());

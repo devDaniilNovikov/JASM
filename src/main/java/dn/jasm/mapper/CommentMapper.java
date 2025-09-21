@@ -54,8 +54,10 @@ public class CommentMapper {
         return commentResponses.stream().map(this::mapToEntity).toList();
     }
 
-    public List<CommentResponse> mapToCommentResponseList(List<CommentEntity> comments){
-        return comments.stream().map(this::mapToDto).toList();
+    public ListCommentResponse mapToCommentResponseList(List<CommentEntity> comments){
+        ListCommentResponse listCommentResponse = new ListCommentResponse();
+        listCommentResponse.setComments(comments.stream().map(this::mapToDto).toList());
+        return listCommentResponse;
     }
 
 

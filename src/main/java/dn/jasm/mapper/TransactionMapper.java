@@ -1,20 +1,16 @@
 package dn.jasm.mapper;
 
+import dn.jasm.dto.transaction.ListTransactionDto;
+import dn.jasm.dto.transaction.SetTransactionDto;
 import dn.jasm.dto.transaction.TransactionDto;
-import dn.jasm.entity.OrderEntity;
 import dn.jasm.entity.TransactionEntity;
-import dn.jasm.entity.UserEntity;
 import dn.jasm.entity.enums.TransactionStatus;
 import dn.jasm.repository.OrderRepository;
 import dn.jasm.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.query.Order;
 import org.springframework.stereotype.Component;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -36,14 +32,18 @@ public class TransactionMapper {
                 .build();
     }
 
-    public List<TransactionDto> mapToDtoList(List<TransactionEntity> txEntities){
-        return txEntities.stream()
+    public ListTransactionDto mapToDtoList(List<TransactionEntity> txEntities){
+        ListTransactionDto listTransactionDto = new ListTransactionDto();
+        listTransactionDto.setTransactions(txEntities.stream()
                 .map(this::mapToDto)
-                .toList();
+                .filter(Objects::nonNull)
+                .toList());
+        return listTransactionDto;
     }
 
-    public List<TransactionEntity> mapToEntityList(List<TransactionDto> transactionDtos){
-        return transactionDtos.stream()
+    public List<TransactionEntity> mapToEntityList(List<TransactionDto> transactionDtoList){
+        return transactionDtoList.stream()
+                .filter(Objects::nonNull)
                 .map(this::mapToEntityWithoutUserAndOrder)
                 .toList();
     }
@@ -66,10 +66,15 @@ public class TransactionMapper {
         return String.valueOf(tx);
     }
 
-    public LinkedHashSet<TransactionDto> mapToDtoSet(Set<TransactionEntity> transactions){
-        return transactions.stream()
+    public SetTransactionDto mapToDtoSet(Set<TransactionEntity> transactions){
+        SetTransactionDto setTransactionDto = new SetTransactionDto();
+        setTransactionDto.setTransactions(transactions.stream()
                 .map(this::mapToDto)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+                .sorted(Comparator.comparing(TransactionDto::getUserId)
+                .thenComparing(tx->tx.getTransactionStatus().equals(TransactionStatus.COMPLETED))
+                .thenComparing(TransactionDto::getCardId))
+                .collect(Collectors.toCollection(LinkedHashSet::new)));
+        return setTransactionDto;
     }
 
     public LinkedHashSet<TransactionEntity> mapToEntitySet(Set<TransactionDto> transactions){

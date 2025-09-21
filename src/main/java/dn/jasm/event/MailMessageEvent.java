@@ -24,4 +24,13 @@ public class MailMessageEvent extends ApplicationEvent {
         this.createdAt = createdAt;
         this.to = to;
     }
+
+    @Override
+    public String toString() {
+        return "MailMessageEvent{" +
+                "content='" + content + '\'' +
+                ", createdAt=" + createdAt +
+                ", to='" + to + '\'' +
+                '}';
+    }
 }

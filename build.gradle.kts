@@ -60,8 +60,8 @@ dependencies {
     implementation("org.springframework.integration:spring-integration-stomp")
     // https://mvnrepository.com/artifact/com.speedment.jpastreamer/jpastreamer-core
     runtimeOnly("org.postgresql:postgresql:42.7.7")
-    annotationProcessor("org.projectlombok:lombok")
-    compileOnly("org.projectlombok:lombok")
+    compileOnly ("org.projectlombok:lombok:1.18.32")
+    annotationProcessor ("org.projectlombok:lombok:1.18.32")
     annotationProcessor ("org.projectlombok:lombok-mapstruct-binding:0.2.0")
     annotationProcessor ("org.mapstruct:mapstruct-processor:1.5.5.Final")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

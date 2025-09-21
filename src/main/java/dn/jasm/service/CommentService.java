@@ -2,6 +2,7 @@ package dn.jasm.service;
 
 import dn.jasm.dto.comment.CommentRequest;
 import dn.jasm.dto.comment.CommentResponse;
+import dn.jasm.dto.comment.CommentUpdateRequest;
 import dn.jasm.dto.comment.ListCommentResponse;
 
 import java.util.List;
@@ -13,7 +14,7 @@ public interface CommentService {
 
     CommentResponse getCommentById(Long id);
 
-    List<CommentResponse> getCommentsByIds(List<Long> ids);
+    ListCommentResponse getCommentsByIds(List<Long> ids);
 
     ListCommentResponse getCommentsWithPagination(int pageNumber, int pageSize);
 
@@ -23,7 +24,7 @@ public interface CommentService {
 
     void deleteComments(List<Long> commentIds);
 
-    void editComment(Long commentId,Long userId);
+    void editComment(CommentUpdateRequest commentUpdateRequest,Long userId);
 
     void addSubComment(Long commentId, String content);
 }

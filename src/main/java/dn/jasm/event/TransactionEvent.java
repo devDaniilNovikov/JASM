@@ -20,6 +20,18 @@ public class TransactionEvent extends ApplicationEvent {
     private Long orderId;
     private Long cardId;
 
+    @Override
+    public String toString() {
+        return "TransactionEvent{" +
+                "txId=" + txId +
+                ", userId=" + userId +
+                ", payedAt=" + payedAt +
+                ", totalAmount=" + totalAmount +
+                ", completedAt=" + completedAt +
+                ", orderId=" + orderId +
+                ", cardId=" + cardId +
+                '}';
+    }
 
     public TransactionEvent(Object source,
                             Long txId,

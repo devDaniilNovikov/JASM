@@ -2,6 +2,7 @@ package dn.jasm.controller;
 
 import dn.jasm.dto.comment.CommentRequest;
 import dn.jasm.dto.comment.CommentResponse;
+import dn.jasm.dto.comment.CommentUpdateRequest;
 import dn.jasm.service.CommentService;
 import dn.jasm.dto.comment.ListCommentResponse;
 import jakarta.validation.constraints.Min;
@@ -23,12 +24,19 @@ public class CommentController {
     private static final String GET_COMMENTS_WITH_PAGINATION = "/api/v1/comments/list";
     private static final String DELETE_COMMENT = "/api/v1/comment/delete/{id}";
     private static final String DELETE_MULTIPLE_COMMENTS = "/api/v1/comments/delete";
+    private static final String EDIT_COMMENT = "/api/v1/comment/edit";
 
     private final CommentService commentService;
 
     @DeleteMapping(DELETE_MULTIPLE_COMMENTS)
-    public void deleteComments(@RequestParam(value = "ids") List<Long> commentIds){
-        commentService.deleteComments(commentIds);
+    public void deleteComments(List<Long> ids){
+        commentService.deleteComments(ids);
+    }
+
+    @PatchMapping(EDIT_COMMENT)
+    public void editComment(@RequestBody CommentUpdateRequest commentUpdateRequest,
+                            @RequestParam Long userId){
+        commentService.editComment(commentUpdateRequest,userId);
     }
 
 
@@ -51,7 +59,7 @@ public class CommentController {
     }
 
     @GetMapping(GET_COMMENTS_BY_IDS)
-    public List<CommentResponse> getCommentByIds(@RequestParam List<Long> ids){
+    public ListCommentResponse getCommentByIds(@RequestParam List<Long> ids){
         return commentService.getCommentsByIds(ids);
     }
 

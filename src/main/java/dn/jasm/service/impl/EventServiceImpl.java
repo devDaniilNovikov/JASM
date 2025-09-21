@@ -11,7 +11,12 @@ import dn.jasm.entity.UserEntity;
 import dn.jasm.entity.enums.TransactionStatus;
 import dn.jasm.event.*;
 import dn.jasm.configuration.kafka.KafkaService;
+import dn.jasm.event.comment.CommentEvent;
+import dn.jasm.event.comment.CommentUpdatedEvent;
+import dn.jasm.event.user.UserCreateEvent;
+import dn.jasm.event.user.UserUpdateEvent;
 import dn.jasm.repository.CardRepository;
+import dn.jasm.repository.ItemRepository;
 import dn.jasm.service.RedisService;
 import dn.jasm.exception.TransactionNotFoundException;
 import dn.jasm.mapper.TransactionMapper;
@@ -23,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -32,9 +36,6 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.math.BigDecimal;
 import java.text.MessageFormat;
-import java.time.Duration;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.concurrent.*;
 
 @Service
@@ -51,6 +52,7 @@ public class EventServiceImpl implements EventService {
     private final RedisService redisService;
     private final RedisTemplate<String,Object> redisTemplate;
     private final JedisPool jedisPool;
+    private final ItemRepository itemRepository;
 
     @EventListener
     @Override
@@ -86,6 +88,30 @@ public class EventServiceImpl implements EventService {
         redisTemplate.expire(cardCreateEvent.getId(),5,TimeUnit.MINUTES);
 
         log.info("Created card is: {}",cardCreateEvent.toString());
+    }
+
+    @Override
+    @EventListener
+    public void handleEvent(CommentUpdatedEvent commentUpdatedEvent) {
+        redisService.writeObjectInRedis(
+                String.valueOf(commentUpdatedEvent.getCommentId()),
+                commentUpdatedEvent.getNewComment()
+        );
+        kafkaService.sendMessage(String.valueOf(commentUpdatedEvent));
+        log.info("Handle Updating of comment: id: {}, new comment: {}",
+                commentUpdatedEvent.getCommentId(),
+                commentUpdatedEvent.getNewComment()
+        );
+    }
+
+    @Override
+    @EventListener
+    public void handleEvent(OrderCreateEvent orderCreateEvent) {
+        String cacheKey = orderCreateEvent.getOrderId().toString();
+        redisService.writeObjectInRedis(cacheKey,orderCreateEvent.toString());
+        kafkaService.sendMessage(orderCreateEvent.toString());
+        itemRepository.deleteAllByIdInBatch(orderCreateEvent.getItemsIds());
+        log.info("Handle order event: {}",orderCreateEvent);
     }
 
 

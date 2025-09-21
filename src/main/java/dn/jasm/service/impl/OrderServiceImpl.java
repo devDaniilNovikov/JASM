@@ -1,9 +1,14 @@
 package dn.jasm.service.impl;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.stripe.model.Price;
+import dn.jasm.dto.item.ItemRequest;
 import dn.jasm.dto.order.OrderMapResponse;
+import dn.jasm.dto.order.OrderRequest;
+import dn.jasm.event.OrderCreateEvent;
+import dn.jasm.exception.ItemNotFoundException;
+import dn.jasm.mapper.ItemMapper;
+import dn.jasm.mapper.OrderMapper;
 import dn.jasm.service.RedisService;
 import dn.jasm.dto.order.ListOrderResponse;
 import dn.jasm.dto.order.OrderResponse;
@@ -12,8 +17,6 @@ import dn.jasm.exception.OrderNotFoundException;
 import dn.jasm.exception.RedisKeyException;
 import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.entity.ItemEntity;
-import dn.jasm.mapper.ItemMapper;
-import dn.jasm.mapper.OrderMapper;
 import dn.jasm.entity.enums.OrderStatus;
 import dn.jasm.repository.ItemRepository;
 import dn.jasm.repository.OrderRepository;
@@ -23,6 +26,8 @@ import dn.jasm.service.OrderService;
 import dn.jasm.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,11 +41,17 @@ import java.util.*;
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
+    @Value("${order.discount.value}")
+    private BigDecimal discountValue;
+
+    @Value("${order.limit.value}")
+    private BigDecimal limit;
+
     private final ItemRepository itemRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ItemMapper itemMapper;
-    private final UserService userService;
+    private final ApplicationEventPublisher eventPublisher;
     private final OrderMapper orderMapper;
     private final RedisService redisService;
 
@@ -65,7 +76,7 @@ public class OrderServiceImpl implements OrderService {
         orderRepository.save(order);
         itemRepository.saveAll(itemList);
         log.info("Created order: {}", order.getId());
-        return orderMapper.toDto(order);
+        return orderMapper.mapToDto(order);
 
     }
 
@@ -79,7 +90,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public void completeOrder(Long orderId, Long userId) {
-        Thread.startVirtualThread(()-> {
+        Thread.startVirtualThread(() -> {
             var order = orderRepository.findById(orderId)
                     .stream()
                     .map(o -> {
@@ -135,7 +146,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse getOrderById(Long id) {
-        return orderMapper.toDto(orderRepository.findById(id)
+        return orderMapper.mapToDto(orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(
                         MessageFormat.format("Order with id: {0} not found", id))));
     }
@@ -147,23 +158,22 @@ public class OrderServiceImpl implements OrderService {
                         MessageFormat.format("User with ID: {0} not found", userId)));
         List<ItemEntity> items = getItemsOfUserFromOrder(user);
         ListOrderResponse listOrderResponse = new ListOrderResponse();
-        List<OrderEntity> orders = getOrdersOfUser(user,items);
-        listOrderResponse.setOrders(orders);
+        listOrderResponse.setOrders(getOrdersOfUser(user,items));
         String username = user.getUsername();
-        orderWithUsernameOfOwner.put(username,listOrderResponse);
+        orderWithUsernameOfOwner.put(username, listOrderResponse);
         ListOrderResponse cacheValue = orderWithUsernameOfOwner.get(username);
         OrderMapResponse orderMapResponse = new OrderMapResponse();
         orderMapResponse.setOrderMap(orderWithUsernameOfOwner);
         try {
             redisService.writeObjectInRedis(username, cacheValue);
-        }catch (RedisKeyException e){
-            log.error("This key already put in redis: {}",username);
+        } catch (RedisKeyException e) {
+            log.error("This key already put in redis: {}", username);
         }
         return orderMapResponse;
     }
 
 
-    private List<ItemEntity> getItemsOfUserFromOrder(UserEntity user){
+    private List<ItemEntity> getItemsOfUserFromOrder(UserEntity user) {
         return itemRepository.findAllByIdIn(user.getOrders()
                 .stream()
                 .filter(Objects::nonNull)
@@ -175,29 +185,87 @@ public class OrderServiceImpl implements OrderService {
                 .toList());
     }
 
-    private List<OrderEntity> getOrdersOfUser(UserEntity user,List<ItemEntity> items){
+    private List<OrderResponse> getOrdersOfUser(UserEntity user, List<ItemEntity> items) {
         Long orderId = items.stream()
                 .map(ItemEntity::getOrder)
                 .filter(Objects::nonNull)
                 .map(OrderEntity::getId)
                 .findAny()
-                .orElseThrow(()->new OrderNotFoundException(
+                .orElseThrow(() -> new OrderNotFoundException(
                         MessageFormat.format(
-                                "Order for of user: {0} not found",user.getId())));
-        return user.getOrders().stream()
+                                "Order for of user: {0} not found", user.getId())));
+        return  orderMapper.mapToList(user.getOrders().stream()
                 .filter(Objects::nonNull)
                 .filter(orderEntity -> orderEntity.getId().equals(orderId))
-                .toList();
+                .toList());
     }
 
     @Override
-    public List<OrderResponse> findAllByIds(List<Long> ids) {
-        if (ids.isEmpty()){
+    public ListOrderResponse findAllByIds(List<Long> ids) {
+        if (ids.isEmpty()) {
             throw new IllegalArgumentException("Ids can't be empty");
         }
-        return orderMapper.toDtoList(orderRepository.findAllById(ids));
+        return orderMapper.mapToDtoList(orderRepository.findAllById(ids));
     }
+
+    @Transactional
+    @Override
+    public void processOrder(OrderRequest orderRequest,List<Long> itemsIds) {
+        if (itemsIds == null || itemsIds.isEmpty()){
+            throw new IllegalArgumentException("Ids can't be null or empty!");
+        }
+        if (itemRepository.findAllById(itemsIds).isEmpty()){
+            throw new ItemNotFoundException("Items not found!");
+        }
+            BigDecimal totalAmount = BigDecimal.valueOf(0);
+            var items = itemMapper.mapToItemRequestList(itemRepository.findAllByIdIn(itemsIds));
+            for (ItemRequest itemRequest: items){
+                BigDecimal itemQuantity = BigDecimal.valueOf(itemRequest.getQuantity());
+                totalAmount = totalAmount.add(itemRequest.getPrice().multiply(itemQuantity));
+                log.info("Total amount: {}",totalAmount);
+            }
+            if (totalAmount.compareTo(limit)>0){
+                orderRequest.setDiscount(discountValue);
+            }
+            else {
+                orderRequest.setDiscount(BigDecimal.ZERO);
+            }
+            orderRequest.setTotalAmount(totalAmount.subtract(orderRequest.getDiscount()));
+            var orderEntity = orderMapper.mapToEntity(orderRequest,itemsIds);
+            orderEntity.setOrderStatus(OrderStatus.PAID);
+            orderEntity.setPayedAt(true);
+            orderEntity.setIsShipped(items
+                    .stream()
+                            .map(ItemRequest::getIsShippable)
+                    .reduce(true, (t, f)-> true));
+            log.info("Processed order status: {}, amount: {}, isShipped: {}",
+                    orderEntity.getOrderStatus(),
+                    orderEntity.getAmount(),
+                    orderEntity.getIsShipped());
+            orderRepository.save(orderEntity);
+            itemRepository.deleteAllByIdInBatch(itemsIds);
+            publishEvent(orderEntity);
+        }
+
+
+
+    private void publishEvent(OrderEntity order) {
+        var itemIds = order.getItems().stream()
+                .map(ItemEntity::getId)
+                .toList();
+        eventPublisher.publishEvent(
+                    new OrderCreateEvent(this,
+                        order.getId(),
+                        order.getPayedAt(),
+                        order.getOrderStatus().name(),
+                        order.getAmount(),
+                        order.getIsShipped(),
+                        itemIds));
+        }
+
+
 }
+
 
 
 

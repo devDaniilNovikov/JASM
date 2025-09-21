@@ -9,10 +9,7 @@ public class RedisSchema {
         return RedisKeyGenerator.getKey("users");
     }
 
-    public static String paymentKey(
-            long userId,
-            OrderStatus orderStatus
-    ){
+    public static String paymentKey(long userId, OrderStatus orderStatus){
         return RedisKeyGenerator.getKey("users:" + userId + ":" + orderStatus.name().toLowerCase());
     }
 }

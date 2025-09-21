@@ -38,22 +38,22 @@ public class OrderEntity extends BasedEntity {
 
     private Integer quantityOfItems;
 
+    private BigDecimal discount;
+
+    private Boolean isShipped;
+
     @OneToOne(cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_id")
     @JsonManagedReference
     @OnDelete(action = OnDeleteAction.CASCADE)
     private TransactionEntity transactionEntity;
 
-
     @OneToMany(mappedBy = "order",fetch = FetchType.LAZY)
     @JsonManagedReference
     private List<ItemEntity> items = new ArrayList<>();
 
-
-
     @Enumerated(EnumType.STRING)
     private OrderStatus orderStatus;
-
 
 
     @Override

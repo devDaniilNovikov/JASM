@@ -1,6 +1,7 @@
 package dn.jasm.service.impl;
 
 import dn.jasm.configuration.aop.Loggable;
+import dn.jasm.dto.transaction.SetTransactionDto;
 import dn.jasm.entity.CardEntity;
 import dn.jasm.exception.CardNotFoundException;
 import dn.jasm.repository.CardRepository;
@@ -193,7 +194,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public LinkedHashSet<TransactionDto> getTransactionSet(int pageNumber,int pageSize) {
+    public SetTransactionDto getTransactionSet(int pageNumber, int pageSize) {
         if (pageSize==0){
             throw new IllegalArgumentException("PageSize can't be null");
         }

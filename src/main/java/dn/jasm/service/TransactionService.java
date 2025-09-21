@@ -1,13 +1,11 @@
 package dn.jasm.service;
 
+import dn.jasm.dto.transaction.SetTransactionDto;
 import dn.jasm.dto.transaction.TransactionDto;
 import dn.jasm.entity.OrderEntity;
-import dn.jasm.entity.TransactionEntity;
 import dn.jasm.entity.UserEntity;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 public interface TransactionService {
 
@@ -20,7 +18,7 @@ public interface TransactionService {
 
     void cancelMultipleTransactions(List<Long> txIds);
 
-    LinkedHashSet<TransactionDto> getTransactionSet(int pageNumber, int pageSize);
+    SetTransactionDto getTransactionSet(int pageNumber, int pageSize);
 
     void deleteTransaction(Long txId);
 

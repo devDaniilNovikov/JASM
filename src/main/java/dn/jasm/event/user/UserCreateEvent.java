@@ -1,4 +1,4 @@
-package dn.jasm.event;
+package dn.jasm.event.user;
 
 
 import lombok.Getter;

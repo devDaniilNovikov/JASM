@@ -3,6 +3,7 @@ package dn.jasm.service;
 import com.stripe.model.Price;
 import dn.jasm.dto.order.ListOrderResponse;
 import dn.jasm.dto.order.OrderMapResponse;
+import dn.jasm.dto.order.OrderRequest;
 import dn.jasm.dto.order.OrderResponse;
 import dn.jasm.entity.ItemEntity;
 import dn.jasm.entity.OrderEntity;
@@ -26,7 +27,9 @@ public interface OrderService {
 
     OrderMapResponse getOrderListOfUser(Long userId);
 
-    List<OrderResponse> findAllByIds(List<Long> ids);
+    ListOrderResponse findAllByIds(List<Long> ids);
+
+    void processOrder(OrderRequest orderRequest,List<Long> itemsIds);
 
 
 

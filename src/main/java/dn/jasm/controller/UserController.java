@@ -43,8 +43,6 @@ public class UserController {
         return userService.getCardsOfUser(userId);
     }
 
-
-
     @GetMapping(GET_TRANSACTIONS_OF_USER)
     public UserResponse getUserTransactions(@RequestParam Long userId){
         return userService.getUserTransactions(userId);

@@ -9,5 +9,5 @@ import java.util.*;
 
 @Data
 public class ListOrderResponse {
-    private List<OrderEntity> orders = new ArrayList<>();
+    private List<OrderResponse> orders = new ArrayList<>();
 }
