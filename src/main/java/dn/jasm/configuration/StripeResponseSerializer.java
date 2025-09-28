@@ -10,12 +10,16 @@ import java.io.IOException;
 
 public class StripeResponseSerializer extends StdSerializer<StripeResponse> {
 
+
+
     public StripeResponseSerializer(){
         super(StripeResponse.class);
     }
     @Override
-    public void serialize(StripeResponse value, JsonGenerator gen, SerializerProvider provider) throws IOException {
-        gen.writeStartObject();;
+    public void serialize(StripeResponse value,
+                          JsonGenerator gen,
+                          SerializerProvider provider) throws IOException {
+        gen.writeStartObject();
         gen.writeStringField("body",value.body());
         gen.writeNumberField("code",value.code());
         gen.isEnabled(StreamWriteFeature.FLUSH_PASSED_TO_STREAM);

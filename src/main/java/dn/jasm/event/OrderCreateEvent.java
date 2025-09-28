@@ -11,7 +11,7 @@ import java.util.Map;
 
 @Getter
 @Setter
-public class OrderCreateEvent extends ApplicationEvent {
+public class OrderCreateEvent extends ApplicationEvent implements BaseEvent {
 
     private Long orderId;
     private Boolean payedAt;
@@ -46,5 +46,10 @@ public class OrderCreateEvent extends ApplicationEvent {
                 ", totalAmount=" + totalAmount +
                 ", isShipped=" + isShipped +
                 '}';
+    }
+
+    @Override
+    public EventType getEventType() {
+        return EventType.ORDER_CREATE;
     }
 }

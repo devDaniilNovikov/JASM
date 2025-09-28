@@ -1,5 +1,11 @@
 package dn.jasm.service.impl;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import dn.jasm.configuration.aop.Loggable;
 import dn.jasm.configuration.aop.TimeResulting;
+import dn.jasm.configuration.kafka.KafkaService;
 import dn.jasm.dto.card.CardResponse;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
@@ -19,7 +25,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +38,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @Service
@@ -47,6 +56,7 @@ public class UserServiceImpl implements UserService {
     private final CardMapper cardMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final RedisService redisService;
+    private final KafkaService kafkaService;
 
 
     @Override
@@ -104,6 +114,7 @@ public class UserServiceImpl implements UserService {
                         MessageFormat.format("User with id: {0} not found", id))));
     }
 
+    @Transactional(readOnly = true)
     @Override
     public UserResponseList findAllWithPagination(int pageNumber, int pageSize) {
         List<UserEntity> users = userRepository.findAll(
@@ -124,6 +135,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserResponseList findAllByIds(List<Long> ids) {
         if (ids.isEmpty()){
             throw new IllegalArgumentException("Ids is empty or null!");
@@ -163,6 +175,7 @@ public class UserServiceImpl implements UserService {
             var cacheKey = String.valueOf(user.getId());
             redisService.writeObjectInRedis(cacheKey, user);
             publishEvent(user);
+            updateBalanceOfUser(user.getId(), BigDecimal.valueOf(1000.1));
             return userMapper.mapToDto(user);
     }
 
@@ -186,11 +199,8 @@ public class UserServiceImpl implements UserService {
     public void updateUser(Long id, UserRequest userRequest) {
        userRepository.findById(id)
                .ifPresentOrElse(user->{
-                    user.setUsername(userRequest.getUsername());
-                    user.setPassword(userRequest.getPassword());
-                    user.setPhoneNumber(userRequest.getPhoneNumber());
+                    isSucessfullValid(userRequest,user);
                     user.setUpdatedAt(LocalDateTime.now());
-                    user.setCreatedAt(user.getCreatedAt());
                     userRepository.save(user);
                     redisService.writeObjectInRedis(user.getId().toString(),user);
                     eventPublisher.publishEvent(new UserUpdateEvent(
@@ -198,13 +208,28 @@ public class UserServiceImpl implements UserService {
                             user.getUsername(),
                             user.getPhoneNumber(),
                             user.getUpdatedAt(),
-                            true));
+                            String.valueOf(id)));
                     log.info("Updated user: {}",user.getUsername());
                 },  ()->{
                     throw new UserNotFoundException(MessageFormat.format("User with id: {0} not found",id));
                 }
                 );
 
+    }
+
+    @Async
+    public void isSucessfullValid(UserRequest userRequest,UserEntity user){
+        if (userRequest.getUsername() != null && !userRequest.getUsername().isEmpty()) {
+            user.setUsername(userRequest.getUsername());
+            log.info("Updated username: {}",userRequest.getUsername());
+        }
+        if (userRequest.getPassword() != null && !userRequest.getPassword().isEmpty()) {
+            user.setPassword(userRequest.getPassword());
+        }
+        if (userRequest.getPhoneNumber() != null && !userRequest.getPhoneNumber().isEmpty()) {
+            user.setPhoneNumber(userRequest.getPhoneNumber());
+            log.info("Updated phoneNumber: {}",userRequest.getPhoneNumber());
+        }
     }
 
     @Override
@@ -223,6 +248,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserResponse getUsersByStatus(String status) {
         Map<String,Object> usersAndTheirStatuses = userRepository.findAllByStatus(status)
                 .stream()
@@ -294,6 +320,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserResponse getCardsOfUser(Long userId) {
         Map<String,Set<CardResponse>> cardMap = new ConcurrentHashMap<>();
         var cards = cardRepository.findByUserId(userId)
@@ -439,6 +466,39 @@ public class UserServiceImpl implements UserService {
     public boolean isExpired(UserEntity user) {
         return ChronoUnit.MINUTES
                 .between(user.getCreatedAt(),LocalDateTime.now())>1;
+    }
+
+    @EventListener
+    @Override
+    public void handleUserCreateEvent(UserCreateEvent userCreateEvent) {
+        redisService.writeObjectInRedis(userCreateEvent.getUserId(),
+                userCreateEvent.toString());
+        log.info("Cached event: {}",userCreateEvent.getUsername());
+        kafkaService.sendMessage(userCreateEvent.toString());
+    }
+
+    @Override
+    @EventListener
+    @TimeResulting
+    public void handleUserUpdateEvent(UserUpdateEvent userUpdateEvent) {
+        Stream.of(userUpdateEvent)
+                .peek(user-> {
+                    user.setIsUpdate(true);
+                    user.setTimeOfUpdating(userUpdateEvent.getTimeOfUpdating());
+                    log.info("[Time of update is: {}]",user.getTimeOfUpdating());
+                    redisService.writeObjectInRedis(userUpdateEvent.getEventId(),userUpdateEvent);
+
+                })
+                .forEach(user->log.info("Updated event: {}, event id: {} isUpdate: {}",
+                        userUpdateEvent.getEventType(),
+                        userUpdateEvent.getEventId(),
+                        userUpdateEvent.getIsUpdate()));
+    }
+
+    @Override
+    @Async
+    public void updateBalanceOfUser(Long id, BigDecimal value) {
+        userRepository.updateBalanceOfUser(id,value);
     }
 
     @Override

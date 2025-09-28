@@ -3,8 +3,11 @@ package dn.jasm.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dn.jasm.configuration.aop.Loggable;
 import dn.jasm.configuration.aop.TimeResulting;
+import dn.jasm.configuration.kafka.KafkaService;
 import dn.jasm.dto.comment.CommentRequest;
 import dn.jasm.dto.comment.CommentResponse;
 import dn.jasm.dto.comment.CommentUpdateRequest;
@@ -22,6 +25,7 @@ import dn.jasm.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -31,6 +35,7 @@ import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,6 +50,7 @@ public class CommentServiceImpl implements CommentService {
     private final RedisService redisService;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final KafkaService kafkaService;
 
     private final Map<String,ListCommentResponse> userAndComments = new HashMap<>();
 
@@ -218,5 +224,43 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public void addSubComment(Long commentId, String content) {
 
+    }
+
+    @Override
+    @EventListener
+    @Loggable
+    public void handleCommentCreateEvent(CommentEvent commentEvent) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+            objectMapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            String message = objectMapper.writeValueAsString(commentEvent);
+
+            CompletableFuture<Void> kafkaFuture = CompletableFuture.runAsync(() ->
+                    kafkaService.sendMessage(message));
+            CompletableFuture<Void> redisFuture = CompletableFuture.runAsync(() ->
+                    redisService.writeObjectInRedis(commentEvent.getComment(), message));
+            CompletableFuture.allOf(kafkaFuture, redisFuture)
+                    .exceptionally(throwable -> {
+                        log.error("Error processing comment event: {}", throwable.getMessage());
+                        return null;
+                    });
+        } catch (JsonProcessingException e) {
+            log.error("Can't serialize comment message: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    @EventListener
+    public void handleCommentUpdateEvent(CommentUpdatedEvent commentUpdatedEvent) {
+        redisService.writeObjectInRedis(
+                String.valueOf(commentUpdatedEvent.getCommentId()),
+                commentUpdatedEvent.getNewComment()
+        );
+        kafkaService.sendMessage(String.valueOf(commentUpdatedEvent));
+        log.info("Handle Updating of comment: id: {}, new comment: {}",
+                commentUpdatedEvent.getCommentId(),
+                commentUpdatedEvent.getNewComment()
+        );
     }
 }

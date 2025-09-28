@@ -31,19 +31,19 @@ public class UserRequest implements Serializable {
             throw new RuntimeException(e.getMessage());
         }
     }
-
-    @NotEmpty(message = "Username can't be empty")
-    @Size(min = 5,max = 20,message = "username size must be size between 5 and 20 chars!")
+//
+//    @NotEmpty(message = "Username can't be empty")
+//    @Size(min = 5,max = 20,message = "username size must be size between 5 and 20 chars!")
     private String username;
 
-    @NotEmpty(message = "Password can't be empty")
-    @Size(min = 5,max = 50,message = "password size must be size between 5 and 50 chars!")
+//    @NotEmpty(message = "Password can't be empty")
+//    @Size(min = 5,max = 50,message = "password size must be size between 5 and 50 chars!")
     private String password;
 
-    @NotEmpty(message = "PhoneNumber can't be empty")
+//    @NotEmpty(message = "PhoneNumber can't be empty")
     private String phoneNumber;
 
-    @NotEmpty(message = "Email can't be empty")
+//    @NotEmpty(message = "Email can't be empty")
     private String email;
 
     private String orderId;

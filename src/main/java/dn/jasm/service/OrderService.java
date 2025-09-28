@@ -7,6 +7,7 @@ import dn.jasm.dto.order.OrderRequest;
 import dn.jasm.dto.order.OrderResponse;
 import dn.jasm.entity.ItemEntity;
 import dn.jasm.entity.OrderEntity;
+import dn.jasm.event.OrderCreateEvent;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -30,6 +31,8 @@ public interface OrderService {
     ListOrderResponse findAllByIds(List<Long> ids);
 
     void processOrder(OrderRequest orderRequest,List<Long> itemsIds);
+
+    void handleOrderCreateEvent(OrderCreateEvent orderCreateEvent);
 
 
 

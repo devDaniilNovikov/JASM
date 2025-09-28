@@ -1,5 +1,6 @@
 package dn.jasm.mapper;
 
+import dn.jasm.dto.item.ItemResponse;
 import dn.jasm.dto.order.ListOrderResponse;
 import dn.jasm.dto.order.OrderRequest;
 import dn.jasm.dto.order.OrderResponse;
@@ -34,13 +35,14 @@ public class OrderMapper {
         return order;
     }
 
-    public OrderEntity mapToEntity(OrderResponse orderResponse){
+    public OrderEntity mapToEntityFromResponse(OrderResponse orderResponse){
         OrderEntity order = new OrderEntity();
         order.setId(orderResponse.getId());
         order.setAmount(orderResponse.getTotalAmount());
         order.setUser(userRepository.findById(orderResponse.getId())
                 .orElseThrow(UserNotFoundException::new));
-        order.setItems(orderResponse.getItems());
+        var orderItems = itemMapper.mapToEntityList(orderResponse.getItems());
+        order.setItems(orderItems);
         order.setQuantityOfItems(orderResponse.getQuantity());
         order.setPayedAt(orderResponse.getIsPayed());
         order.setIsShipped(orderResponse.getIsShipped());
@@ -58,7 +60,7 @@ public class OrderMapper {
                 .userId(order.getUser().getId())
                 .totalAmount(order.getAmount())
                 .isPayed(true)
-                .items(order.getItems())
+                .items(itemMapper.mapToDtoList(order.getItems()))
                 .build();
     }
 
@@ -72,11 +74,6 @@ public class OrderMapper {
         return listOrderResponse;
     }
 
-    public List<OrderEntity> mapToEntityList(List<OrderResponse> orders){
-        return orders.stream()
-                .map(this::mapToEntity)
-                .toList();
-    }
 
     public List<OrderResponse> mapToList(List<OrderEntity> orders){
         return orders.stream()
@@ -84,6 +81,8 @@ public class OrderMapper {
                 .map(this::mapToDto)
                 .toList();
     }
+
+
 
 
 }

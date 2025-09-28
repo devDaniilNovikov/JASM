@@ -18,9 +18,10 @@ public class MessageController {
 
 
     @PostMapping(SEND_MAIL_MESSAGE)
-    @ResponseStatus(HttpStatus.ACCEPTED)
+    @ResponseStatus(HttpStatus.OK)
     public void sendMessage(@RequestParam String to,
-                            @RequestParam String content) {
-        senderService.sendMessage(to, content);
+                            @RequestParam String content,
+                            @RequestParam String from) {
+        senderService.sendMessage(to, content,from);
     }
 }

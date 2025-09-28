@@ -4,6 +4,8 @@ import dn.jasm.dto.comment.CommentRequest;
 import dn.jasm.dto.comment.CommentResponse;
 import dn.jasm.dto.comment.CommentUpdateRequest;
 import dn.jasm.dto.comment.ListCommentResponse;
+import dn.jasm.event.comment.CommentEvent;
+import dn.jasm.event.comment.CommentUpdatedEvent;
 
 import java.util.List;
 import java.util.Map;
@@ -27,4 +29,8 @@ public interface CommentService {
     void editComment(CommentUpdateRequest commentUpdateRequest,Long userId);
 
     void addSubComment(Long commentId, String content);
+
+    void handleCommentCreateEvent(CommentEvent commentEvent);
+
+    void handleCommentUpdateEvent(CommentUpdatedEvent commentUpdatedEvent);
 }

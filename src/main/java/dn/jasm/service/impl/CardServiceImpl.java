@@ -19,6 +19,7 @@ import dn.jasm.service.CardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
@@ -177,6 +178,15 @@ public class CardServiceImpl implements CardService {
                 .peek(card->redisService.writeObjectInRedis(cardId.toString(),card.toString()))
                 .findAny()
                 .orElseThrow(CardNotFoundException::new);
+    }
+
+    @Override
+    @EventListener
+    public void handleCardCreateEvent(CardCreateEvent cardCreateEvent) {
+        redisService.writeObjectInRedis(cardCreateEvent.getId(),
+                cardCreateEvent.toString());
+
+        log.info("Created card is: {}",cardCreateEvent.toString());
     }
 
 

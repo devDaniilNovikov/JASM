@@ -1,6 +1,7 @@
 package dn.jasm.dto.order;
 
 import dn.jasm.dto.item.ItemRequest;
+import dn.jasm.dto.item.ItemResponse;
 import dn.jasm.entity.ItemEntity;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +16,7 @@ public class OrderResponse {
     private Long id;
     private BigDecimal totalAmount;
     private Long userId;
-    private List<ItemEntity> items;
+    private List<ItemResponse> items;
     private Integer quantity;
     private Boolean isPayed;
     private Boolean isShipped;

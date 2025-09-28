@@ -13,5 +13,6 @@ import java.util.Set;
 @Setter
 public class CardMapResponse {
 
+
     private Map<String, Set<CardResponse>> cardsOfUser = new HashMap<>();
 }

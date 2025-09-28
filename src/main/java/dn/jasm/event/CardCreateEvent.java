@@ -6,7 +6,7 @@ import org.springframework.context.ApplicationEvent;
 
 @Getter
 @Setter
-public class CardCreateEvent extends ApplicationEvent {
+public class CardCreateEvent extends ApplicationEvent implements BaseEvent {
 
     private String cardNumber;
     private String date;
@@ -32,5 +32,12 @@ public class CardCreateEvent extends ApplicationEvent {
                 ", date='" + date + '\'' +
                 ", cvc='" + cvc + '\'' +
                 '}';
+    }
+
+
+
+    @Override
+    public EventType getEventType() {
+        return EventType.USER_CREATE;
     }
 }

@@ -20,6 +20,8 @@ public interface RedisService {
 
     void deleteCachesByKeys(Set<String> keys);
 
+    void writeEventInRedis(Class<?> clazz);
+
 
 
 

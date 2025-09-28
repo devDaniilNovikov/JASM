@@ -1,5 +1,6 @@
 package dn.jasm.service;
 
+import dn.jasm.dto.shop.ListShopResponse;
 import dn.jasm.dto.shop.ShopRequest;
 import dn.jasm.dto.shop.ShopResponse;
 import dn.jasm.entity.ShopEntity;
@@ -10,7 +11,7 @@ public interface ShopService {
 
     ShopEntity findById(Long id);
 
-    ShopEntity findByName(String shopName);
+    ShopEntity findByShopName(String shopName);
 
     void registerShop(ShopRequest shopRequest);
 
@@ -18,7 +19,7 @@ public interface ShopService {
 
     Double getRatingOfShop(Long shopId);
 
-    List<ShopResponse> getListOfShops();
+    ListShopResponse getListOfShops();
 
 
 

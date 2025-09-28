@@ -14,9 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 import redis.clients.jedis.JedisPool;
 
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -32,6 +34,8 @@ public class RedisServiceImpl implements RedisService {
     private Long TTL;
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final SecureRandom secureRandom = new SecureRandom();
+
 
 
     @Override
@@ -45,6 +49,12 @@ public class RedisServiceImpl implements RedisService {
         }catch (RedisKeyException e){
             log.error("Key already have in redis: {}",e.getMessage());
         }
+    }
+
+    @Override
+    public void writeEventInRedis(Class<?> clazz){
+        var key = String.valueOf(secureRandom.nextLong(100000));
+        redisTemplate.opsForValue().set(key,clazz);
     }
 
 

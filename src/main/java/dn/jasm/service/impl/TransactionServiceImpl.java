@@ -23,6 +23,7 @@ import dn.jasm.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -72,7 +73,7 @@ public class TransactionServiceImpl implements TransactionService {
         validateTransactionBalance(user,order);
         var txDto = createTx(order,user,card);
         publishEvent(txDto,order,user);
-        putToCache(txDto);
+        redisService.writeObjectInRedis(String.valueOf(txDto.getTxId()),txDto.toString());
         log.info("Created tx: {} for order: {} and user: {} with card: {}",
                 txDto.getTxId(),
                 order.getId(),
@@ -97,7 +98,8 @@ public class TransactionServiceImpl implements TransactionService {
         ));
     }
 
-    private TransactionDto createTx(OrderEntity order, UserEntity user, CardEntity cardEntity){
+
+    public TransactionDto createTx(OrderEntity order, UserEntity user, CardEntity cardEntity){
         TransactionEntity tx = new TransactionEntity();
         tx.setTotalAmount(order.getAmount());
         tx.setTransactionStatus(TransactionStatus.PROCESSING);
@@ -120,9 +122,9 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
 
-    private void putToCache(TransactionDto transactionDto) {
-        EventServiceImpl.putInRedis(transactionDto, redisService);
-    }
+//    private void putToCache(TransactionDto transactionDto) {
+//        EventServiceImpl.putInRedis(transactionDto, redisService);
+//    }
 
     public void validateTransactionBalance(UserEntity user,
                                             OrderEntity order){
@@ -140,10 +142,41 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-
-
-
-
+    @EventListener
+    @Override
+    public void handleTransactionEvent(TransactionEvent transactionEvent){
+        BigDecimal userTotalBalance = userRepository.findById(transactionEvent.getUserId())
+                .stream()
+                .map(user->{
+                    BigDecimal totalBalance = user.getBalance().subtract(transactionEvent.getTotalAmount());
+                    user.setBalance(totalBalance);
+                    return userRepository.save(user);
+                })
+                .map(UserEntity::getBalance)
+                .reduce(BigDecimal.ZERO,BigDecimal::add);
+        if (transactionEvent.getCompletedAt()){
+            try {
+                var txId = transactionEvent.getTxId();
+                var transaction = transactionRepository.findById(txId)
+                        .orElseThrow(() -> new TransactionNotFoundException(
+                                MessageFormat.format("Transaction with id: {0} not found", transactionEvent.getTxId())
+                        ));
+                var cardForTx = cardRepository.findById(transactionEvent.getCardId())
+                        .orElseThrow(RuntimeException::new);
+                transaction.setTransactionStatus(TransactionStatus.COMPLETED);
+                transaction.setCard(cardForTx);
+                transactionRepository.save(transaction);
+                var txStatus = transaction.getTransactionStatus();
+                var cacheTx = transactionMapper.mapToDto(transaction);
+                redisService.writeObjectInRedis(String.valueOf(txId),cacheTx);
+                log.info("Successfully processing of transaction with id: {}, status: {} ", txId, txStatus);
+            } catch (Exception e) {
+                log.error("Exception in processing of transaction: {}",e.getMessage());
+                throw new RuntimeException(e);
+            }
+        }
+        log.info("Total balance of user is: {}",userTotalBalance);
+    }
 
 
     @Override

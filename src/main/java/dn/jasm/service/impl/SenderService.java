@@ -30,14 +30,15 @@ public class SenderService {
 
 
 
-    public void sendMessage(String to, String content) throws MailException{
+    public void sendMessage(String from,String to, String content) throws MailException{
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(from);
                 message.setTo(to);
                 message.setText(content);
                 message.setSubject("Notification");
                 javaMailSender.send(message);
-                eventPublisher.publishEvent(new MailMessageEvent(this, content, LocalDateTime.now(), to));
+                eventPublisher.publishEvent(new MailMessageEvent(this, content, LocalDateTime.now(),to,from));
                 log.info("Email sent successfully to: {}", to);
             } catch (MailException e) {
                 log.error("Failed to send email to: {}. Error: {}", to, content);
@@ -46,7 +47,7 @@ public class SenderService {
             }
     }
 
-    public void sendMessage(String to, MultipartFile file,String content) throws MailException, IOException {
+    public void sendMessage(String from,String to, MultipartFile file,String content) throws MailException, IOException {
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(message, true);
@@ -59,7 +60,7 @@ public class SenderService {
             }
             javaMailSender.send(message);
             eventPublisher.publishEvent(new MailMessageEvent(
-                    this,content,LocalDateTime.now(),to));
+                    this,content,LocalDateTime.now(),to, from));
         } catch (MessagingException | IOException e) {
             log.error("Failed send mail  to: {} cause: {}",to, ExceptionUtils.getMessage(e));
             throw new RuntimeException(e);

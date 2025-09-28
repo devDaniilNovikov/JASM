@@ -3,6 +3,7 @@ package dn.jasm.service;
 import dn.jasm.dto.card.*;
 import dn.jasm.dto.card.SetCardResponse;
 import dn.jasm.entity.CardEntity;
+import dn.jasm.event.CardCreateEvent;
 
 import java.util.Set;
 
@@ -21,6 +22,8 @@ public interface CardService {
      CardMapResponse getCardsOfUser(Long userId);
 
      CardResponse getCardById(Long cardId);
+
+     void handleCardCreateEvent(CardCreateEvent cardCreateEvent);
 
 
 

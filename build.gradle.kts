@@ -41,6 +41,8 @@ dependencies {
     // https://mvnrepository.com/artifact/com.google.guava/guava
     implementation("com.google.guava:guava:33.4.8-jre")
     implementation("com.ea.async:ea-async:1.2.3")
+    implementation ("org.apache.pdfbox:pdfbox:2.0.30")
+
     // https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-ui
 
     implementation ("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")

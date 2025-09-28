@@ -5,6 +5,7 @@ import com.stripe.model.Price;
 import dn.jasm.dto.item.ItemRequest;
 import dn.jasm.dto.order.OrderMapResponse;
 import dn.jasm.dto.order.OrderRequest;
+import dn.jasm.event.CardCreateEvent;
 import dn.jasm.event.OrderCreateEvent;
 import dn.jasm.exception.ItemNotFoundException;
 import dn.jasm.mapper.ItemMapper;
@@ -23,11 +24,11 @@ import dn.jasm.repository.OrderRepository;
 import dn.jasm.entity.UserEntity;
 import dn.jasm.repository.UserRepository;
 import dn.jasm.service.OrderService;
-import dn.jasm.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -55,7 +57,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final RedisService redisService;
 
-    private final Map<String, ListOrderResponse> orderWithUsernameOfOwner = new HashMap<>();
+    private final Map<String,ListOrderResponse> orderWithUsernameOfOwner = new HashMap<>();
 
     @Override
     @Transactional
@@ -136,6 +138,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public Double calculateRatingOfItem(List<ItemEntity> items) {
         return items.stream()
                 .map(ItemEntity::getRating)
@@ -147,6 +150,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponse getOrderById(Long id) {
         return orderMapper.mapToDto(orderRepository.findById(id)
+                .stream()
+                .peek(order->redisService.writeObjectInRedis(order.getId().toString(),order))
+                .findAny()
                 .orElseThrow(() -> new OrderNotFoundException(
                         MessageFormat.format("Order with id: {0} not found", id))));
     }
@@ -194,7 +200,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new OrderNotFoundException(
                         MessageFormat.format(
                                 "Order for of user: {0} not found", user.getId())));
-        return  orderMapper.mapToList(user.getOrders().stream()
+        return orderMapper.mapToList(user.getOrders().stream()
                 .filter(Objects::nonNull)
                 .filter(orderEntity -> orderEntity.getId().equals(orderId))
                 .toList());
@@ -205,7 +211,12 @@ public class OrderServiceImpl implements OrderService {
         if (ids.isEmpty()) {
             throw new IllegalArgumentException("Ids can't be empty");
         }
-        return orderMapper.mapToDtoList(orderRepository.findAllById(ids));
+        return orderMapper.mapToDtoList(orderRepository.findAllById(ids)
+                .stream()
+                .filter(order->order.getOrderStatus().equals(OrderStatus.NEW))
+                .peek(order->redisService.writeObjectInRedis(String.valueOf(order.getId()),order))
+                .toList());
+
     }
 
     @Transactional
@@ -214,7 +225,7 @@ public class OrderServiceImpl implements OrderService {
         if (itemsIds == null || itemsIds.isEmpty()){
             throw new IllegalArgumentException("Ids can't be null or empty!");
         }
-        if (itemRepository.findAllById(itemsIds).isEmpty()){
+        else if (itemRepository.findAllById(itemsIds).isEmpty()){
             throw new ItemNotFoundException("Items not found!");
         }
             BigDecimal totalAmount = BigDecimal.valueOf(0);
@@ -247,6 +258,13 @@ public class OrderServiceImpl implements OrderService {
             publishEvent(orderEntity);
         }
 
+    @Override
+    @EventListener
+    public void handleOrderCreateEvent(OrderCreateEvent orderCreateEvent) {
+        redisService.writeObjectInRedis(String.valueOf(orderCreateEvent.getOrderId()),
+                orderCreateEvent.getStatus());
+        log.info("Created order event is: {}",orderCreateEvent);
+    }
 
 
     private void publishEvent(OrderEntity order) {

@@ -16,12 +16,22 @@ public class ItemMapper {
 
 
     public ItemEntity mapToEntity(ItemRequest itemRequest){
-        ItemEntity itemEntity = new ItemEntity();
+        var itemEntity = new ItemEntity();
         itemEntity.setName(itemRequest.getName());
         itemEntity.setPrice(itemEntity.getPrice());
         itemEntity.setQuantity(itemRequest.getQuantity());
         itemEntity.setDescription(itemRequest.getDescription());
         itemEntity.setIsShippable(itemRequest.getIsShippable());
+        return itemEntity;
+    }
+
+    public ItemEntity mapToEntity(ItemResponse itemResponse){
+        ItemEntity itemEntity = new ItemEntity();
+        itemEntity.setName(itemResponse.getName());
+        itemEntity.setPrice(itemResponse.getPrice());
+        itemEntity.setQuantity(itemResponse.getQuantity());
+        itemEntity.setDescription(itemResponse.getDescription());
+        itemEntity.setIsShippable(itemResponse.getIsShippable());
         return itemEntity;
     }
 
@@ -48,7 +58,7 @@ public class ItemMapper {
         return itemResponse;
     }
 
-    public List<ItemEntity> mapToEntityList(List<ItemRequest> itemRequest){
+    public List<ItemEntity> mapToEntityListFromRequest(List<ItemRequest> itemRequest){
         return itemRequest.stream()
                 .map(this::mapToEntity)
                 .toList();
@@ -76,5 +86,14 @@ public class ItemMapper {
                 .toList());
         return listItemResponse;
     }
+
+    public List<ItemEntity> mapToEntityList(List<ItemResponse> items){
+        return items.stream()
+                .filter(Objects::nonNull)
+                .map(this::mapToEntity)
+                .toList();
+    }
+
+
 
 }

@@ -4,6 +4,7 @@ import dn.jasm.dto.transaction.SetTransactionDto;
 import dn.jasm.dto.transaction.TransactionDto;
 import dn.jasm.entity.OrderEntity;
 import dn.jasm.entity.UserEntity;
+import dn.jasm.event.TransactionEvent;
 
 import java.util.List;
 
@@ -23,5 +24,7 @@ public interface TransactionService {
     void deleteTransaction(Long txId);
 
     void validateTransactionBalance(UserEntity user, OrderEntity order);
+
+    void handleTransactionEvent(TransactionEvent transactionEvent);
 
 }

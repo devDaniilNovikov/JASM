@@ -15,13 +15,14 @@ import reactor.kafka.sender.SenderRecord;
 @RequiredArgsConstructor
 public class KafkaServiceImpl implements KafkaService {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String,Object> kafkaTemplate;
     private final KafkaSender<String,Object> sender;
 
     @Value("${spring.kafka.template.default-topic}")
     private String topic;
 
     @Override
+    @Transactional
     public void sendMessage(String message) {
         kafkaTemplate.send(topic,message);
     }

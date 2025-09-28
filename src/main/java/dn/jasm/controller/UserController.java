@@ -77,7 +77,7 @@ public class UserController {
     }
 
     @PatchMapping(value = UPDATE_USER)
-    @ResponseStatus(HttpStatus.MULTI_STATUS)
+    @ResponseStatus(HttpStatus.OK)
     @SwaggerAnnotationForUser(operation = "Обновление пользователя по его уникальному идентификатору")
     public void updateUser(@RequestParam Long id, @RequestBody UserRequest userRequest){
          userService.updateUser(id,userRequest);

@@ -18,7 +18,10 @@ spring:
     username: ${POSTGRES_USERNAME}
     password: ${POSTGRES_PASSWORD}
     url: ${POSTGRES_URL}
-
+#  elasticsearch:
+#    uris: ${ELASTIC_URI}
+#    username: ${ELASTIC_USERNAME}
+#    password: ${ELASTIC_PASSWORD}
   jpa:
     show-sql: false
     hibernate:
@@ -78,6 +81,7 @@ spring:
     redis:
       time-to-live: 5
       enable-statistics: true
+    cache-names: notification,users,payments,orders,items,comments
   threads:
     virtual:
       enabled: true

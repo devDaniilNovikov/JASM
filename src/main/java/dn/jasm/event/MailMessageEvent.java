@@ -9,8 +9,9 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class MailMessageEvent extends ApplicationEvent {
+public class MailMessageEvent extends ApplicationEvent implements BaseEvent {
 
+    private String from;
     private String content;
     private LocalDateTime createdAt;
     private String to;
@@ -18,11 +19,13 @@ public class MailMessageEvent extends ApplicationEvent {
     public MailMessageEvent(Object source,
                             String content,
                             LocalDateTime createdAt,
-                            String to) {
+                            String to,
+                            String from) {
         super(source);
         this.content = content;
         this.createdAt = createdAt;
         this.to = to;
+        this.from = from;
     }
 
     @Override
@@ -32,5 +35,10 @@ public class MailMessageEvent extends ApplicationEvent {
                 ", createdAt=" + createdAt +
                 ", to='" + to + '\'' +
                 '}';
+    }
+
+    @Override
+    public EventType getEventType() {
+        return EventType.MAIL_MESSAGE;
     }
 }

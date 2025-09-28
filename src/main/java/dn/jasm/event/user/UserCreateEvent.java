@@ -1,6 +1,8 @@
 package dn.jasm.event.user;
 
 
+import dn.jasm.event.BaseEvent;
+import dn.jasm.event.EventType;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
@@ -10,7 +12,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class UserCreateEvent extends ApplicationEvent {
+public class UserCreateEvent extends ApplicationEvent implements BaseEvent {
 
     private String username;
     private String phoneNumber;
@@ -35,5 +37,10 @@ public class UserCreateEvent extends ApplicationEvent {
         this.phoneNumber = phoneNumber;
         this.timeStamp = timeStamp;
         this.userId = userId;
+    }
+
+    @Override
+    public EventType getEventType() {
+        return EventType.USER_CREATE;
     }
 }

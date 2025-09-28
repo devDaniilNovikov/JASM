@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class TransactionEvent extends ApplicationEvent {
+public class TransactionEvent extends ApplicationEvent implements BaseEvent {
 
     private Long txId;
     private Long userId;
@@ -50,5 +50,10 @@ public class TransactionEvent extends ApplicationEvent {
         this.orderId = orderId;
         this.cardId = cardId;
 
+    }
+
+    @Override
+    public EventType getEventType() {
+        return EventType.TRANSACTION;
     }
 }
