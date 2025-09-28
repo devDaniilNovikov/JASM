@@ -6,35 +6,44 @@ import dn.jasm.exception.RedisKeyException;
 import dn.jasm.service.RedisService;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import redis.clients.jedis.JedisPool;
-
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.text.MessageFormat;
-import java.util.List;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class RedisServiceImpl implements RedisService {
 
+    private static final String DEFAULT_PREFIX = "cache";
+    private static  String prefix = null;
+
     @Value("${spring.cache.redis.time-to-live}")
     private Long TTL;
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final SecureRandom secureRandom = new SecureRandom();
+
+    public static void setPrefix(String keyPrefix){
+        prefix = keyPrefix;
+    }
+    public String getKey(String key){
+        return getPrefix() + ":" + key;
+    }
+
+    public String getPrefix(){
+        return Objects.requireNonNullElse(prefix,DEFAULT_PREFIX);
+    }
 
 
 
@@ -52,9 +61,10 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
-    public void writeEventInRedis(Class<?> clazz){
+    public <T> void writeEventInRedis(T t){
         var key = String.valueOf(secureRandom.nextLong(100000));
-        redisTemplate.opsForValue().set(key,clazz);
+        T value = Objects.requireNonNull(t);
+        redisTemplate.opsForValue().set(key,value);
     }
 
 
@@ -134,6 +144,8 @@ public class RedisServiceImpl implements RedisService {
             redisTemplate.delete(keys);
         }
     }
+
+
 
 
 }

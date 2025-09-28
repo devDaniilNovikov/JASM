@@ -20,29 +20,15 @@ public class PaymentController {
     private static final String CREATE_CUSTOMER = "/api/v1/payment/create-customer";
     private static final String CREATE_SUBSCRIPTION= "/api/v1/payment/create-subscription";
     private static final String CREATE_PRODUCT= "/api/v1/payment/create-product";
+    private static final String CREATE_CHARGE = "/api/v1/charge/create";
 
 
     private final PaymentService paymentService;
 
-
-    @PostMapping(CREATE_PAYMENT)
-    public ResponseEntity<PaymentIntent> createPayment(@RequestParam BigDecimal amount,
-                                                       @RequestParam String currency,
-                                                       @RequestParam(value = "payment_method") String paymentMethod) {
-        return ResponseEntity.ok(paymentService.createPayment(amount,currency,paymentMethod));
-    }
-    @PostMapping(CREATE_CUSTOMER)
-    public ResponseEntity<Customer> createCustomer(@RequestBody UserRequest request) {
-        return ResponseEntity.ok(paymentService.createCustomer(request));
-    }
-    @PostMapping(CREATE_SUBSCRIPTION)
-    public ResponseEntity<Subscription> createSubscription(@RequestParam Long clientID,
-                                                           @RequestParam BigDecimal amount,
-                                                           @RequestParam Long quantity) {
-        return ResponseEntity.ok(paymentService.createSubscription(clientID,amount,quantity));
-    }
-    @PostMapping(CREATE_PRODUCT)
-    public ResponseEntity<Product> createProduct(@RequestBody ItemRequest request,@RequestParam Long price){
-        return ResponseEntity.ok(paymentService.createProduct(request,price));
+    @PostMapping(CREATE_CHARGE)
+    public void createClient(@RequestBody   UserRequest userRequest,
+                             @RequestParam  BigDecimal amount,
+                             @RequestParam  String currency){
+        paymentService.createPaymentIntent(userRequest, amount, currency);
     }
 }

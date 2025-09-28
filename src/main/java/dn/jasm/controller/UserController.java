@@ -25,7 +25,7 @@ public class UserController {
     private static final String DELETE_USERS_BY_IDS = "/api/v1/users/delete";
     private static final String GET_ALL_USERS = "/api/v1/user/users-list";
     private static final String GET_USER_BY_ID = "/api/v1/user/{id}";
-    private static final String GET_BY_USERNAME = "/api/v1/user/";
+    private static final String GET_BY_USERNAME = "/api/v1/user";
     private static final String BAN_USER_BY_ID = "/api/v1/user/ban";
     private static final String GET_USERS_BY_STATUS = "/api/v1/user/users/status";
     private static final String GET_USER_BY_PHONE_NUMBER = "/api/v1/user/by-phoneNumber";

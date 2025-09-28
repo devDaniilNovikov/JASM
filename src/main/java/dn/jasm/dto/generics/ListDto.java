@@ -1,4 +1,4 @@
-package dn.jasm.dto;
+package dn.jasm.dto.generics;
 
 import lombok.Data;
 
@@ -9,4 +9,5 @@ import java.util.List;
 public class ListDto <T>{
 
     private List<T> list = new ArrayList<>();
+
 }

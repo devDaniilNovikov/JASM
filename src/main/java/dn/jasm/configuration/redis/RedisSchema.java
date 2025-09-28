@@ -3,6 +3,7 @@ package dn.jasm.configuration.redis;
 
 import dn.jasm.entity.enums.OrderStatus;
 import dn.jasm.event.MailMessageEvent;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.integration.mail.dsl.Mail;
 import org.springframework.stereotype.Component;
@@ -12,10 +13,13 @@ import java.util.List;
 import java.util.Set;
 
 @Component
+@RequiredArgsConstructor
 public class RedisSchema {
 
+    private final RedisKeyGenerator redisKeyGenerator;
+
     @Value("${spring.cache.cache-names}")
-    private static List<String> cacheNamesSet;
+    private  List<String> cacheNamesSet;
 
     public static String userKeys(){
         return RedisKeyGenerator.getKey("users");
@@ -25,7 +29,7 @@ public class RedisSchema {
         return RedisKeyGenerator.getKey("users:" + userId + ":" + orderStatus.name().toLowerCase());
     }
     public static String mailKey(){
-        return RedisKeyGenerator.getKey(cacheNamesSet.get(0));
+        return RedisKeyGenerator.getKey("mail");
     }
 
 }

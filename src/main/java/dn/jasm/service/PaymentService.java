@@ -11,11 +11,7 @@ import java.math.BigDecimal;
 
 public interface PaymentService {
 
-    PaymentIntent createPayment(BigDecimal amount,String currency,String paymentMethod);
-
-    Customer createCustomer(UserRequest userRequest);
-
-    Subscription createSubscription(Long clientId,BigDecimal amount,Long quantity);
-
-    Product createProduct(ItemRequest itemRequest, Long price);
+    void createPaymentIntent(UserRequest userRequest,
+                             BigDecimal amount,
+                             String currency);
 }

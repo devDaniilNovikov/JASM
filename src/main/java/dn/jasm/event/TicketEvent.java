@@ -1,11 +1,12 @@
 package dn.jasm.event;
 
-import com.google.common.base.Objects;
+import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.stereotype.Component;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Formatter;
@@ -13,7 +14,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class TicketEvent extends ApplicationEvent implements BaseEvent {
+public class TicketEvent extends ApplicationEvent implements BaseEvent, Serializable {
 
     private String id;
 
@@ -69,11 +70,11 @@ public class TicketEvent extends ApplicationEvent implements BaseEvent {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TicketEvent that = (TicketEvent) o;
-        return Objects.equal(getId(), that.getId());
+        return Objects.equals(getId(), that.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(getId());
+        return Objects.hash(this.id);
     }
 }
