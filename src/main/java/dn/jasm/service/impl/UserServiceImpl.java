@@ -11,6 +11,7 @@ import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
 import dn.jasm.entity.*;
+import dn.jasm.event.EventType;
 import dn.jasm.event.PaymentEvent;
 import dn.jasm.event.user.UserCreateEvent;
 import dn.jasm.exception.AlreadyExistException;
@@ -541,23 +542,21 @@ public class UserServiceImpl implements UserService {
         var user = userRepository.findByEmail(paymentEvent.getEmail())
                 .orElseThrow(UserNotFoundException::new);
         final BigDecimal balance = getBalanceOfUser(paymentEvent.getEmail());
-        CardEntity card = cardRepository.findByCardNumber(paymentEvent.getCardNumber())
+
+        var card = cardRepository.findByCardNumber(paymentEvent.getCardNumber())
                 .stream()
-                .filter(cardEntity-> {
-                    final boolean b = cardEntity.getBalance().compareTo(paymentEvent.getAmount()) < 0;
-                    if (b){throw new IllegalArgumentException("[Недостаточно средств, попробуйте другую карту]");}
-                    return true;
-                })
                 .filter(cardEntity -> cardEntity.getUser()
                         .getId()
                         .equals(user.getId()))
                 .findAny()
                 .orElseThrow(CardNotFoundException::new);
         var balanceOfCard = card.getBalance().subtract(paymentEvent.getAmount());
+        log.info("[Balance of card: {}]",card.getBalance());
         card.setBalance(balanceOfCard);
         cardRepository.save(card);
         log.info("[Balance of card: {} is: {}]",card.getId(),card.getBalance());
         log.info("[Balance: {}]",balance.toString());
+
         final BigDecimal total = balance.subtract(paymentEvent.getAmount());
         user.setBalance(total);
         if (total.compareTo(BigDecimal.ZERO)<0){
