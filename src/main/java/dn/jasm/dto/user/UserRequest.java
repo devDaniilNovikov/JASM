@@ -48,4 +48,6 @@ public class UserRequest implements Serializable {
 
     private String orderId;
 
+    private String cardNumber;
+
 }

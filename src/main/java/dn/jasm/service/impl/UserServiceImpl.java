@@ -11,8 +11,10 @@ import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
 import dn.jasm.entity.*;
+import dn.jasm.event.PaymentEvent;
 import dn.jasm.event.user.UserCreateEvent;
 import dn.jasm.exception.AlreadyExistException;
+import dn.jasm.exception.CardNotFoundException;
 import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.CardMapper;
 import dn.jasm.mapper.UserMapper;
@@ -502,6 +504,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public BigDecimal getBalanceOfUser(String email) {
+        return userRepository.findByEmail(email)
+                .stream()
+                .map(UserEntity::getBalance)
+                .reduce(BigDecimal.ZERO,BigDecimal::add);
+    }
+
+    @Override
     public UserResponse getUserTransactions(Long userId) {
         List<TransactionEntity> transactions = transactionRepository.findByUserId(userId);
         Map<String,List<TransactionEntity>> transactionMap = new HashMap<>();
@@ -523,6 +533,38 @@ public class UserServiceImpl implements UserService {
         return UserResponse.builder()
                 .txMap(transactionMap)
                 .build();
+    }
+
+    @EventListener
+    public void handlePaymentEvent(PaymentEvent paymentEvent){
+        log.info("[Amount is : {}]",paymentEvent.getAmount());
+        var user = userRepository.findByEmail(paymentEvent.getEmail())
+                .orElseThrow(UserNotFoundException::new);
+        final BigDecimal balance = getBalanceOfUser(paymentEvent.getEmail());
+        CardEntity card = cardRepository.findByCardNumber(paymentEvent.getCardNumber())
+                .stream()
+                .filter(cardEntity-> {
+                    final boolean b = cardEntity.getBalance().compareTo(paymentEvent.getAmount()) < 0;
+                    if (b){throw new IllegalArgumentException("[Недостаточно средств, попробуйте другую карту]");}
+                    return true;
+                })
+                .filter(cardEntity -> cardEntity.getUser()
+                        .getId()
+                        .equals(user.getId()))
+                .findAny()
+                .orElseThrow(CardNotFoundException::new);
+        var balanceOfCard = card.getBalance().subtract(paymentEvent.getAmount());
+        card.setBalance(balanceOfCard);
+        cardRepository.save(card);
+        log.info("[Balance of card: {} is: {}]",card.getId(),card.getBalance());
+        log.info("[Balance: {}]",balance.toString());
+        final BigDecimal total = balance.subtract(paymentEvent.getAmount());
+        user.setBalance(total);
+        if (total.compareTo(BigDecimal.ZERO)<0){
+            throw new RuntimeException("Недостаточно средств");
+        }
+        userRepository.save(user);
+        log.info("Final Balance is: {}",total.toString());
     }
 
 }

@@ -37,11 +37,15 @@ dependencies {
     implementation("org.springframework.integration:spring-integration-mail")
     implementation("org.springframework.integration:spring-integration-redis")
     implementation ("com.stripe:stripe-java:24.0.0")
+    // https://mvnrepository.com/artifact/redis.clients/jedis
+    implementation("redis.clients:jedis:6.0.0")
     implementation ("io.projectreactor.kafka:reactor-kafka:1.3.21")
     // https://mvnrepository.com/artifact/com.google.guava/guava
     implementation("com.google.guava:guava:33.4.8-jre")
     implementation("com.ea.async:ea-async:1.2.3")
     implementation ("org.apache.pdfbox:pdfbox:2.0.30")
+    // https://mvnrepository.com/artifact/com.google.code.gson/gson
+    implementation("com.google.code.gson:gson:2.13.2")
 
     // https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-ui
 

@@ -16,6 +16,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @EntityGraph(attributePaths = {"orders,cards,comments"})
     Optional<UserEntity> findByUsername(String username);
 
+    Optional<UserEntity> findByEmail(String email);
+
 
     @EntityGraph(attributePaths = "comments")
     Optional<UserEntity> findById(Long id, PageRequest pageRequest);
@@ -31,7 +33,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     Optional<UserEntity> findByTransactionEntityId(Long txId);
 
-    boolean findByEmail(String email);
+
 
     boolean existsByEmail(String email);
 

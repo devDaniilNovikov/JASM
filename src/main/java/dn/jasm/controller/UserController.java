@@ -12,6 +12,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -35,8 +37,14 @@ public class UserController {
     private static final String GET_USER_WITH_NOT_NULL_COUNT_OF_DEALS = "/api/v1/users/deals";
     private static final String GET_TRANSACTIONS_OF_USER = "/api/v1/user/transactions";
     private static final String GET_CARDS_OF_USER = "/api/v1/user/cards";
+    private static final String GET_BALANCE_OF_USER = "/api/v1/user/balance";
 
     private final UserService userService;
+
+    @GetMapping(GET_BALANCE_OF_USER)
+    public BigDecimal getBalanceOfUser(@RequestParam String email){
+        return userService.getBalanceOfUser(email);
+    }
 
     @GetMapping(GET_CARDS_OF_USER)
     public UserResponse getCardList(@RequestParam Long userId){

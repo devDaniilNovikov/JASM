@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -27,6 +28,9 @@ public class CardEntity extends BasedEntity {
 
     @Column(nullable = false)
     private String cvc;
+
+    @Column
+    private BigDecimal balance;
 
     @Column(name = "card_number", nullable = false,unique = true)
     private String cardNumber;

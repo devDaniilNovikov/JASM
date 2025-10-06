@@ -46,17 +46,23 @@ public class CommentMapper {
 
     public ListCommentResponse mapToDtoSet(Set<CommentEntity> comments){
         ListCommentResponse listCommentResponse = new ListCommentResponse();
-        listCommentResponse.setComments(comments.stream().map(this::mapToDto).toList());
+        listCommentResponse.setComments(comments.stream()
+                .map(this::mapToDto)
+                .toList());
         return listCommentResponse;
     }
 
     public List<CommentEntity> mapToEntityList(List<CommentResponse> commentResponses){
-        return commentResponses.stream().map(this::mapToEntity).toList();
+        return commentResponses.stream()
+                .map(this::mapToEntity)
+                .toList();
     }
 
     public ListCommentResponse mapToCommentResponseList(List<CommentEntity> comments){
         ListCommentResponse listCommentResponse = new ListCommentResponse();
-        listCommentResponse.setComments(comments.stream().map(this::mapToDto).toList());
+        listCommentResponse.setComments(comments.stream()
+                .map(this::mapToDto)
+                .toList());
         return listCommentResponse;
     }
 
