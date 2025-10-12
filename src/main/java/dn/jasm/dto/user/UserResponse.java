@@ -11,6 +11,7 @@ import lombok.*;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -34,6 +35,8 @@ public class UserResponse implements Serializable{
     private String password;
     @JsonProperty(value = "номер телефона")
     private String phoneNumber;
+    @JsonProperty(value = "баланс пользователя")
+    private BigDecimal balance;
     @JsonProperty(value = "статус пользователя")
     private String userStatus;
     @JsonProperty(value = "почта пользователя")

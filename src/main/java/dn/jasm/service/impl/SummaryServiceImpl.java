@@ -30,7 +30,7 @@ public class SummaryServiceImpl implements SummaryService {
                 orderStatuses == null ? Set.of(OrderStatus.values()) : orderStatuses,
                 paymentStatuses == null ? Set.of(PaymentStatus.values()) : paymentStatuses)
                 .orElseThrow(()->new UserNotFoundException(
-                        MessageFormat.format("User with id: {0} not found",userId)
+                        MessageFormat.format("[User with id: {0} not found]",userId)
                 ));
     }
 

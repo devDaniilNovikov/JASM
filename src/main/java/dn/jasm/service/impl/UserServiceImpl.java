@@ -70,19 +70,16 @@ public class UserServiceImpl implements UserService {
                              .peek(user-> redisService.writeObjectInRedis(phoneNumber,user))
                              .findAny()
                              .orElseThrow(()->new UserNotFoundException(
-                                     MessageFormat.format("User with phoneNumber: {0} not found",phoneNumber))));
+                                     MessageFormat.format("[User with phoneNumber: {0} not found]",phoneNumber))));
          }
          return userMapper.mapToDto(userRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(()->new UserNotFoundException(
-                        MessageFormat.format("User with phoneNumber: {0} not found",phoneNumber))));
+                        MessageFormat.format("[User with phoneNumber: {0} not found]",phoneNumber))));
 
     }
 
 
-    private List<Object> mapToSingletonList(Object object){
-        return Optional.of(Collections.singletonList(object))
-                .orElseThrow(()->new IllegalArgumentException("Element can't be null"));
-    }
+
 
     @Override
     public UserResponse findByUsername(String username) {
@@ -92,11 +89,11 @@ public class UserServiceImpl implements UserService {
                         redisService.writeObjectInRedis(username,user);
                         return user;
                     }).orElseThrow(()->new UserNotFoundException(
-                    MessageFormat.format("User with username: {0} not found",username))));
+                    MessageFormat.format("[User with username: {0} not found]",username))));
         }
         return userMapper.mapToDto(userRepository.findByUsername(username)
                 .orElseThrow(()->new UserNotFoundException(
-                        MessageFormat.format("User with username: {0} not found",username))));
+                        MessageFormat.format("[User with username: {0} not found]",username))));
     }
 
     @Override
@@ -110,11 +107,11 @@ public class UserServiceImpl implements UserService {
                         redisService.writeObjectInRedis(cacheKey, user);
                         return user;
                     }).orElseThrow(() -> new UserNotFoundException(
-                            MessageFormat.format("User with id: {0} not found", id))));
+                            MessageFormat.format("[User with id: {0} not found]", id))));
         }
         return userMapper.mapToDto(userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(
-                        MessageFormat.format("User with id: {0} not found", id))));
+                        MessageFormat.format("[User with id: {0} not found]", id))));
     }
 
     @Transactional(readOnly = true)
@@ -141,7 +138,7 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public UserResponseList findAllByIds(List<Long> ids) {
         if (ids.isEmpty()){
-            throw new IllegalArgumentException("Ids is empty or null!");
+            throw new IllegalArgumentException("[Ids is empty or null!]");
         }
         var idsAsList = new HashSet<>(ids).toString();
         List<UserEntity> users = userRepository.findAllById(ids)
@@ -167,7 +164,7 @@ public class UserServiceImpl implements UserService {
             if (userRepository.existsByUsernameOrPhoneNumber(
                     userRequest.getUsername(),
                     userRequest.getPhoneNumber())) {
-                throw new AlreadyExistException("User already exists!");
+                throw new AlreadyExistException("[User already exists!]");
             }
             user.setPassword(userRequest.getPassword());
             user.setPhoneNumber(userRequest.getPhoneNumber());
@@ -214,7 +211,7 @@ public class UserServiceImpl implements UserService {
                             String.valueOf(id)));
                     log.info("Updated user: {}",user.getUsername());
                 },  ()->{
-                    throw new UserNotFoundException(MessageFormat.format("User with id: {0} not found",id));
+                    throw new UserNotFoundException(MessageFormat.format("[User with id: {0} not found]",id));
                 }
                 );
 
@@ -224,14 +221,14 @@ public class UserServiceImpl implements UserService {
     public void isSucessfullValid(UserRequest userRequest,UserEntity user){
         if (userRequest.getUsername() != null && !userRequest.getUsername().isEmpty()) {
             user.setUsername(userRequest.getUsername());
-            log.info("Updated username: {}",userRequest.getUsername());
+            log.info("[Updated username: {}]",userRequest.getUsername());
         }
         if (userRequest.getPassword() != null && !userRequest.getPassword().isEmpty()) {
             user.setPassword(userRequest.getPassword());
         }
         if (userRequest.getPhoneNumber() != null && !userRequest.getPhoneNumber().isEmpty()) {
             user.setPhoneNumber(userRequest.getPhoneNumber());
-            log.info("Updated phoneNumber: {}",userRequest.getPhoneNumber());
+            log.info("[Updated phoneNumber: {}]",userRequest.getPhoneNumber());
         }
     }
 
@@ -242,12 +239,12 @@ public class UserServiceImpl implements UserService {
                 .peek(user-> user.setStatus(UserStatus.BANNED.name()))
                 .findAny()
                 .orElseThrow(()->new UserNotFoundException(
-                        MessageFormat.format("User with id: {0} not found",id)));
+                        MessageFormat.format("[User with id: {0} not found]",id)));
         requireUser.setBanTime(LocalDateTime.now());
         userRepository.save(requireUser);
         var cacheKey = requireUser.getId().toString();
         redisService.deleteCacheByKey(cacheKey);
-        log.info("Banned user is: {}",requireUser.getUsername());
+        log.info("[Banned user is: {}]",requireUser.getUsername());
     }
 
     @Override
@@ -267,7 +264,7 @@ public class UserServiceImpl implements UserService {
         if (redisService.checkKeysExist(userKeys)){
             redisService.writeObjectsInRedis(userKeys,userValues);
         }
-        log.info("Users by status: {}",usersAndTheirStatuses);
+        log.info("[Users by status: {}]",usersAndTheirStatuses);
         return UserResponse.builder()
                 .users(usersAndTheirStatuses)
                 .build();
@@ -294,11 +291,11 @@ public class UserServiceImpl implements UserService {
     public UserResponse getUserByOrderId(Long orderId) {
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new NoSuchElementException(
-                        MessageFormat.format("Order with id: {0} not found",orderId)));
+                        MessageFormat.format("[Order with id: {0} not found]",orderId)));
         UserEntity user = order.getUser();
         if (user == null) {
             throw new UserNotFoundException(
-                    MessageFormat.format("User not found for order with id: {0} ",orderId));
+                    MessageFormat.format("[User not found for order with id: {0} ]",orderId));
         }
         String cacheKey = user.getId().toString();
         if (!redisService.checkKeyExist(cacheKey)) {
@@ -354,7 +351,7 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(Long id) {
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(
-                        MessageFormat.format("User with id: {0} not found", id)));
+                        MessageFormat.format("[User with id: {0} not found]", id)));
         ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
         String cacheKey = String.valueOf(id);
         CompletableFuture<Void> completableFutureComments = CompletableFuture.runAsync(()->{
@@ -411,7 +408,7 @@ public class UserServiceImpl implements UserService {
                          .toList();
         userRepository.deleteAllByIdInBatch(ids);
         transactionRepository.deleteAllByIdInBatch(userTransactionIds);
-        log.info("Deleted users: {}",users);
+        log.info("[Deleted users: {}]",users);
 
     }
 
@@ -433,7 +430,7 @@ public class UserServiceImpl implements UserService {
         Set<String> cacheKeysListValue = Collections.singleton(cacheKeys);
         Set<Object> userValues = new HashSet<>(usersForUpdate);
         redisService.writeObjectsInRedis(cacheKeysListValue,userValues);
-        log.info("UpdatedUsers: {}",usersForUpdate);
+        log.info("[UpdatedUsers: {}]",usersForUpdate);
     }
 
     @Override
@@ -441,7 +438,7 @@ public class UserServiceImpl implements UserService {
         List<CardEntity> cards = user.getCards();
         if (!Objects.equals(card,null)){
             cards.add(card);
-            log.info("Added card: {},cardList: {}",card,cards);
+            log.info("[Added card: {},cardList: {}]",card,cards);
         }
 
     }
@@ -451,7 +448,7 @@ public class UserServiceImpl implements UserService {
         List<OrderEntity> orders = user.getOrders();
         if (!Objects.equals(order,null)){
             orders.add(order);
-            log.info("Added order: {}, orders: {}",order,orders);
+            log.info("[Added order: {}, orders: {}]",order,orders);
         }
     }
 
@@ -460,7 +457,7 @@ public class UserServiceImpl implements UserService {
         List<CommentEntity> comments = user.getComments();
         if (!Objects.equals(comment,null)){
             comments.add(comment);
-            log.info("Added comment: {}, comments: {}",comment,comments);
+            log.info("[Added comment: {}, comments: {}]",comment,comments);
         }
 
     }
@@ -476,7 +473,7 @@ public class UserServiceImpl implements UserService {
     public void handleUserCreateEvent(UserCreateEvent userCreateEvent) {
         redisService.writeObjectInRedis(userCreateEvent.getUserId(),
                 userCreateEvent.toString());
-        log.info("Cached event: {}",userCreateEvent.getUsername());
+        log.info("[Cached event: {}]",userCreateEvent.getUsername());
         kafkaService.sendMessage(userCreateEvent.toString());
     }
 
@@ -492,7 +489,7 @@ public class UserServiceImpl implements UserService {
                     redisService.writeObjectInRedis(userUpdateEvent.getEventId(),userUpdateEvent);
 
                 })
-                .forEach(user->log.info("Updated event: {}, event id: {} isUpdate: {}",
+                .forEach(user->log.info("[Updated event: {}, event id: {} isUpdate: {}]",
                         userUpdateEvent.getEventType(),
                         userUpdateEvent.getEventId(),
                         userUpdateEvent.getIsUpdate()));
@@ -518,7 +515,7 @@ public class UserServiceImpl implements UserService {
         Map<String,List<TransactionEntity>> transactionMap = new HashMap<>();
         var user = userRepository.findById(userId)
                 .orElseThrow(()->new UserNotFoundException(
-                        MessageFormat.format("User with id: {0} not found",userId)
+                        MessageFormat.format("[User with id: {0} not found]",userId)
                 ));
         BigDecimal txAmount = transactions.stream()
                 .map(TransactionEntity::getTotalAmount)
@@ -529,20 +526,26 @@ public class UserServiceImpl implements UserService {
                 .filter(tx->tx.getTotalAmount()!=null)
                 .toList();
         String mapKey = user.getUsername();
-        log.info("Key is: {}",mapKey);
+        log.info("[Key is: {}]",mapKey);
         transactionMap.put(mapKey,txWithAmountValue);
         return UserResponse.builder()
                 .txMap(transactionMap)
                 .build();
     }
 
+    @Override
+    public UserResponse findByEmail(String email) {
+       return userMapper.mapToDto(userRepository.findByEmail(email)
+               .orElseThrow(UserNotFoundException::new));
+    }
+
     @EventListener
     public void handlePaymentEvent(PaymentEvent paymentEvent){
         log.info("[Amount is : {}]",paymentEvent.getAmount());
-        var user = userRepository.findByEmail(paymentEvent.getEmail())
+        String email = paymentEvent.getEmail();
+        var user = userRepository.findByEmail(email)
                 .orElseThrow(UserNotFoundException::new);
-        final BigDecimal balance = getBalanceOfUser(paymentEvent.getEmail());
-
+        final BigDecimal balance = user.getBalance();
         var card = cardRepository.findByCardNumber(paymentEvent.getCardNumber())
                 .stream()
                 .filter(cardEntity -> cardEntity.getUser()
@@ -550,20 +553,23 @@ public class UserServiceImpl implements UserService {
                         .equals(user.getId()))
                 .findAny()
                 .orElseThrow(CardNotFoundException::new);
-        var balanceOfCard = card.getBalance().subtract(paymentEvent.getAmount());
-        log.info("[Balance of card: {}]",card.getBalance());
+        var balanceOfCard = card.getBalance();
+        var amount = paymentEvent.getAmount();
+        var totalBalanceOfCard = balanceOfCard.subtract(amount);
+        log.info("[Balance of card: {} is: {}, balance of user: {}]",
+                card.getId(),
+                totalBalanceOfCard,
+                user.getBalance());
         card.setBalance(balanceOfCard);
         cardRepository.save(card);
-        log.info("[Balance of card: {} is: {}]",card.getId(),card.getBalance());
-        log.info("[Balance: {}]",balance.toString());
-
-        final BigDecimal total = balance.subtract(paymentEvent.getAmount());
-        user.setBalance(total);
-        if (total.compareTo(BigDecimal.ZERO)<0){
+        log.info("[Total balance of card: {}]",totalBalanceOfCard);
+        final BigDecimal totalBalance = balance.subtract(paymentEvent.getAmount());
+        user.setBalance(totalBalance);
+        if (totalBalance.compareTo(BigDecimal.ZERO)<0){
             throw new RuntimeException("Недостаточно средств");
         }
         userRepository.save(user);
-        log.info("Final Balance is: {}",total.toString());
+        log.info("[Total Balance of user is: {}]",totalBalance);
     }
 
 }

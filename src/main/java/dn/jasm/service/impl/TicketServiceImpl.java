@@ -76,10 +76,10 @@ public class TicketServiceImpl implements TicketService {
                     UUID.randomUUID().toString(),
                     UUID.randomUUID().toString(),
                     UUID.randomUUID().toString())); //FOR TEST
-            log.info("File created!");
+            log.info("[File created!]");
             return byteArrayOutputStream.toByteArray();
         }catch (IOException e){
-            log.error("Error writing pdf file");
+            log.error("[Error writing pdf file]");
             return null;
         }
 

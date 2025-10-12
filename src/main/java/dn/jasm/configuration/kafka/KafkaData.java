@@ -14,12 +14,15 @@ public class KafkaData {
     private String timeStamp;
     private TopicName topicName;
     private long senderId;
+    private String message;
 
     public KafkaData(String timeStamp,
                      TopicName topicName,
-                     long senderId) {
+                     long senderId,
+                     String message) {
         this.timeStamp = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-Mm-Dd"));
         this.topicName = topicName;
         this.senderId = senderId;
+        this.message = message;
     }
 }

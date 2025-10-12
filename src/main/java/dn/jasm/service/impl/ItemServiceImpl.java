@@ -32,7 +32,7 @@ public class ItemServiceImpl implements ItemService {
         item.setPrice(price.getUnitAmountDecimal());
         item.setType(product.getType());
         itemRepository.save(item);
-        log.info("Created item: {}", item.getName());
+        log.info("[Created item: {}]", item.getName());
         return item;
     }
 

@@ -58,7 +58,7 @@ public class CardServiceImpl implements CardService {
         userCards.add(card);
         cardRepository.save(card);
         card.setUser(user);
-        log.info("Saved card is: {} of user: {}, cardType: {}",
+        log.info("[Saved card is: {} of user: {}, cardType: {}]",
                 card.getCardNumber(),
                 card.getUser().getUsername(),
                 card.getCardType());
@@ -66,7 +66,7 @@ public class CardServiceImpl implements CardService {
         publishEvent(card);
         var cacheValue = cardMapper.toDto(card);
         redisService.writeObjectInRedis(cacheValue.getId(),cacheValue.toString());
-        log.info("Saving of user with card: {}",user.getCards());
+        log.info("[Saving of user with card: {}]",user.getCards());
         return cardMapper.toDto(card);
 
     }
@@ -100,7 +100,7 @@ public class CardServiceImpl implements CardService {
                     .map(TransactionEntity::getId)
                     .map(String::valueOf)
                     .collect(Collectors.toSet());
-            log.info("Updated tx's is: {}",updatedTxsIdsAsString);
+            log.info("[Updated tx's is: {}]",updatedTxsIdsAsString);
         }
         card.setUser(null);
         userRepository.save(user);
@@ -108,7 +108,7 @@ public class CardServiceImpl implements CardService {
                     redisService.deleteCacheByKey(cardId.toString());
                 });
         completableFutureRedis.join();
-        log.info("Deleted card: {} of user: {}",card,user.getUsername());
+        log.info("[Deleted card: {} of user: {}][",card,user.getUsername());
     }
 
     @Override
@@ -121,6 +121,7 @@ public class CardServiceImpl implements CardService {
                 .map(CardEntity::getId)
                 .map(String::valueOf)
                 .collect(Collectors.toSet());
+        log.info("[Cards: {}]",cards);
         redisService.writeObjectsInRedis(cacheKeys, new HashSet<>(cards.getContent()));
         return cardMapper.mapToSetCardResponse(new HashSet<>(cards.getContent()));
 
@@ -137,8 +138,8 @@ public class CardServiceImpl implements CardService {
                 .peek((count)-> {
                     String cacheKey = String.valueOf(userId);
                     redisService.writeObjectInRedis(cacheKey,count);
-                    log.info("Cached value is: {}, of: {}",count,cacheKey);
-                    log.info("Count of cards: {}",count);
+                    log.info("[Cached value is: {}, of: {}]",count,cacheKey);
+                    log.info("[Count of cards: {}]",count);
                 })
                 .sum();
     }
@@ -146,7 +147,7 @@ public class CardServiceImpl implements CardService {
     @Override
     public CardMapResponse getCardsOfUser(Long userId) {
         if (userId==null){
-            throw new IllegalArgumentException("UserId can't be null");
+            throw new IllegalArgumentException("[UserId can't be null!!!]");
         }
         CardMapResponse cardMapResponse = new CardMapResponse();
         Map<String, Set<CardResponse>> map = new ConcurrentHashMap<>();
@@ -186,7 +187,7 @@ public class CardServiceImpl implements CardService {
         redisService.writeObjectInRedis(cardCreateEvent.getId(),
                 cardCreateEvent.toString());
 
-        log.info("Created card is: {}",cardCreateEvent.toString());
+        log.info("[Created card is: {}]",cardCreateEvent.toString());
     }
 
 

@@ -63,7 +63,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse createOrder(Price price, List<ItemEntity> items) {
         if (items.isEmpty()) {
-            throw new IllegalArgumentException("Items can't be null");
+            throw new IllegalArgumentException("[Items can't be null]");
         }
         OrderEntity order = new OrderEntity();
         var itemList = items.stream()
@@ -77,7 +77,7 @@ public class OrderServiceImpl implements OrderService {
         order.setRating(0.0);
         orderRepository.save(order);
         itemRepository.saveAll(itemList);
-        log.info("Created order: {}", order.getId());
+        log.info("[Created order: {}]", order.getId());
         return orderMapper.mapToDto(order);
 
     }
@@ -109,7 +109,7 @@ public class OrderServiceImpl implements OrderService {
                                 })
                                 .findAny()
                                 .orElseThrow(() -> new UserNotFoundException(
-                                        MessageFormat.format("User with id: {0} not found", userId)));
+                                        MessageFormat.format("[User with id: {0} not found]", userId)));
                         userRepository.save(userWithChangedBalance);
                         o.setUser(userWithChangedBalance);
                         userWithChangedBalance.getOrders().add(o);
@@ -117,7 +117,7 @@ public class OrderServiceImpl implements OrderService {
                     })
                     .findAny()
                     .orElseThrow(RuntimeException::new);
-            log.info("Order with id #{} completed", order.getId());
+            log.info("[Order with id #{} completed]", order.getId());
         });
 
     }
@@ -131,10 +131,10 @@ public class OrderServiceImpl implements OrderService {
                 .flatMap(Collection::stream)
                 .filter(o -> o.getId().equals(orderId))
                 .findAny()
-                .orElseThrow(() -> new OrderNotFoundException("Order not found"));
+                .orElseThrow(() -> new OrderNotFoundException("[Order not found]"));
         order.setOrderStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
-        log.info("Order: #{} is cancelled", orderId);
+        log.info("[Order: #{} is cancelled]", orderId);
     }
 
     @Override
@@ -154,14 +154,14 @@ public class OrderServiceImpl implements OrderService {
                 .peek(order->redisService.writeObjectInRedis(order.getId().toString(),order))
                 .findAny()
                 .orElseThrow(() -> new OrderNotFoundException(
-                        MessageFormat.format("Order with id: {0} not found", id))));
+                        MessageFormat.format("[Order with id: {0} not found]", id))));
     }
 
     @Override
     public OrderMapResponse getOrderListOfUser(Long userId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(
-                        MessageFormat.format("User with ID: {0} not found", userId)));
+                        MessageFormat.format("[User with ID: {0} not found]", userId)));
         List<ItemEntity> items = getItemsOfUserFromOrder(user);
         ListOrderResponse listOrderResponse = new ListOrderResponse();
         listOrderResponse.setOrders(getOrdersOfUser(user,items));
@@ -173,7 +173,7 @@ public class OrderServiceImpl implements OrderService {
         try {
             redisService.writeObjectInRedis(username, cacheValue);
         } catch (RedisKeyException e) {
-            log.error("This key already put in redis: {}", username);
+            log.error("[This key already put in redis: {}]", username);
         }
         return orderMapResponse;
     }
@@ -199,7 +199,7 @@ public class OrderServiceImpl implements OrderService {
                 .findAny()
                 .orElseThrow(() -> new OrderNotFoundException(
                         MessageFormat.format(
-                                "Order for of user: {0} not found", user.getId())));
+                                "[Order for of user: {0} not found]", user.getId())));
         return orderMapper.mapToList(user.getOrders().stream()
                 .filter(Objects::nonNull)
                 .filter(orderEntity -> orderEntity.getId().equals(orderId))
@@ -209,7 +209,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public ListOrderResponse findAllByIds(List<Long> ids) {
         if (ids.isEmpty()) {
-            throw new IllegalArgumentException("Ids can't be empty");
+            throw new IllegalArgumentException("[Ids can't be empty]");
         }
         return orderMapper.mapToDtoList(orderRepository.findAllById(ids)
                 .stream()
@@ -223,17 +223,17 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void processOrder(OrderRequest orderRequest,List<Long> itemsIds) {
         if (itemsIds == null || itemsIds.isEmpty()){
-            throw new IllegalArgumentException("Ids can't be null or empty!");
+            throw new IllegalArgumentException("[Ids can't be null or empty!]");
         }
         else if (itemRepository.findAllById(itemsIds).isEmpty()){
-            throw new ItemNotFoundException("Items not found!");
+            throw new ItemNotFoundException("[Items not found!]");
         }
             BigDecimal totalAmount = BigDecimal.valueOf(0);
             var items = itemMapper.mapToItemRequestList(itemRepository.findAllByIdIn(itemsIds));
             for (ItemRequest itemRequest: items){
                 BigDecimal itemQuantity = BigDecimal.valueOf(itemRequest.getQuantity());
                 totalAmount = totalAmount.add(itemRequest.getPrice().multiply(itemQuantity));
-                log.info("Total amount: {}",totalAmount);
+                log.info("[Total amount: {}]",totalAmount);
             }
             if (totalAmount.compareTo(limit)>0){
                 orderRequest.setDiscount(discountValue);
@@ -249,7 +249,7 @@ public class OrderServiceImpl implements OrderService {
                     .stream()
                             .map(ItemRequest::getIsShippable)
                     .reduce(true, (t, f)-> true));
-            log.info("Processed order status: {}, amount: {}, isShipped: {}",
+            log.info("[Processed order status: {}, amount: {}, isShipped: {}]",
                     orderEntity.getOrderStatus(),
                     orderEntity.getAmount(),
                     orderEntity.getIsShipped());
@@ -263,7 +263,7 @@ public class OrderServiceImpl implements OrderService {
     public void handleOrderCreateEvent(OrderCreateEvent orderCreateEvent) {
         redisService.writeObjectInRedis(String.valueOf(orderCreateEvent.getOrderId()),
                 orderCreateEvent.getStatus());
-        log.info("Created order event is: {}",orderCreateEvent);
+        log.info("[Created order event is: {}]",orderCreateEvent);
     }
 
 

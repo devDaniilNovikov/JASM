@@ -9,6 +9,7 @@ import dn.jasm.dto.user.UserRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.support.ServletRequestHandledEvent;
@@ -16,15 +17,13 @@ import org.springframework.web.context.support.ServletRequestHandledEvent;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
 public class PaymentController {
 
-    private static final String CREATE_PAYMENT = "/api/v1/payment/create-payment";
-    private static final String CREATE_CUSTOMER = "/api/v1/payment/create-customer";
-    private static final String CREATE_SUBSCRIPTION= "/api/v1/payment/create-subscription";
-    private static final String CREATE_PRODUCT= "/api/v1/payment/create-product";
+    private static final String GET_PAYMENT_STATUS = "/api/v1/payment/{id}/status";
     private static final String CREATE_CHARGE = "/api/v1/charge/create";
 
     private final ApplicationEventPublisher eventPublisher;
@@ -34,9 +33,14 @@ public class PaymentController {
 
     @PostMapping(CREATE_CHARGE)
     public void createPayment(@RequestBody  UserRequest userRequest,
-                             @RequestParam  BigDecimal amount,
-                             @RequestParam String paymentMethod,
-                             @RequestHeader(required = true) Map<String,String> headers){
-        paymentService.createPayment(userRequest, amount, headers,paymentMethod);
+                              @RequestParam  BigDecimal amount,
+                              @RequestHeader(required = true) Map<String,String> headers){
+        paymentService.createPayment(userRequest, amount, headers);
+    }
+    
+    @GetMapping(GET_PAYMENT_STATUS)
+    public PaymentIntent getPaymentStatus(@PathVariable String id){
+        return paymentService.getPaymentStatus(id);
+                
     }
 }

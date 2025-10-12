@@ -39,10 +39,10 @@ public class SenderService {
                 message.setSubject("Notification");
                 javaMailSender.send(message);
                 eventPublisher.publishEvent(new MailMessageEvent(this, content, LocalDateTime.now(),to,from));
-                log.info("Email sent successfully to: {}", to);
+                log.info("[Email sent successfully to: {}]", to);
             } catch (MailException e) {
-                log.error("Failed to send email to: {}. Error: {}", to, content);
-                throw new RuntimeException("Failed to send email");
+                log.error("[Failed to send email to: {}. Error: {}]", to, content);
+                throw new RuntimeException("[Failed to send email]");
 
             }
     }
@@ -62,7 +62,7 @@ public class SenderService {
             eventPublisher.publishEvent(new MailMessageEvent(
                     this,content,LocalDateTime.now(),to, from));
         } catch (MessagingException | IOException e) {
-            log.error("Failed send mail  to: {} cause: {}",to, ExceptionUtils.getMessage(e));
+            log.error("[Failed send mail  to: {} cause: {}]",to, ExceptionUtils.getMessage(e));
             throw new RuntimeException(e);
         }
     }

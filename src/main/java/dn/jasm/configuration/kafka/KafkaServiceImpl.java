@@ -10,6 +10,9 @@ import reactor.core.publisher.Mono;
 import reactor.kafka.sender.KafkaSender;
 import reactor.kafka.sender.SenderRecord;
 
+import java.security.SecureRandom;
+import java.util.UUID;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -24,7 +27,8 @@ public class KafkaServiceImpl implements KafkaService {
     @Override
     @Transactional
     public void sendMessage(String message) {
-        kafkaTemplate.send(topic,message);
+        String key = UUID.randomUUID().toString();
+        kafkaTemplate.send(topic,key,message);
     }
 
     @Override
@@ -36,9 +40,7 @@ public class KafkaServiceImpl implements KafkaService {
             case ORDER_TOPIC -> "order_topic";
             case ITEM_TOPIC -> "item_topic";
         };
-        sender.send(
-                Mono.just(SenderRecord.create(
-                topic,
+        sender.send(Mono.just(SenderRecord.create(topic,
                 5,
                 System.currentTimeMillis(),
                 String.valueOf(kafkaData.hashCode()),

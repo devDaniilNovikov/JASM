@@ -3,17 +3,17 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.primitives.Bytes;
 import com.google.gson.JsonObject;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.net.ApiRequestParams.EnumParam.*;
 import com.stripe.model.*;
-import com.stripe.param.ChargeCreateParams;
-import com.stripe.param.CustomerCreateParams;
-import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.*;
 import com.stripe.param.SetupIntentCreateParams.PaymentMethodOptions.AcssDebit.Currency;
-import com.stripe.param.SetupIntentUpdateParams;
 import dn.jasm.event.PaymentEvent;
+import dn.jasm.exception.CardNotFoundException;
+import dn.jasm.mapper.PaymentMapper;
 import dn.jasm.repository.*;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.service.ItemService;
@@ -55,21 +55,14 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${account.secret.id}")
     private String accountId;
 
-    private static final String CURRENCY = Currency.USD.getValue().toLowerCase();
+    private static final String USD_CURRENCY = Currency.USD.getValue().toLowerCase();
     private static final String RU_LOCALE = "ru";
-
-    private final UserRepository userRepository;
-    private final PaymentRepository paymentRepository;
-    private final ItemRepository itemRepository;
-    private final OrderRepository orderRepository;
-    private final CardRepository cardRepository;
-    private final ItemService itemService;
-    private final OrderService orderService;
     private final ObjectMapper objectMapper;
     private final RedisService redisService;
-    private final SecureRandom secureRandom = new SecureRandom();
-    private final RestClient restClient;
     private final ApplicationEventPublisher eventPublisher;
+    private final PaymentRepository paymentRepository;
+    private final PaymentMapper paymentMapper;
+    private final CardRepository cardRepository;
 
 
 
@@ -82,49 +75,92 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public void createPayment(UserRequest userRequest,
-                               BigDecimal amount,
-                              Map<String,String> headers,
-                              String paymentMethod) {
+                              BigDecimal amount,
+                              Map<String,String> headers) {
         try {
             CustomerCreateParams params = CustomerCreateParams.builder()
                     .setEmail(userRequest.getEmail())
                     .setPhone(userRequest.getPhoneNumber())
                     .setName(userRequest.getUsername())
-                    .setPaymentMethod(paymentMethod)
-                    .build();
-            PaymentIntentCreateParams createParams = PaymentIntentCreateParams
-                    .builder()
-                    .setAmount(Long.valueOf(String.valueOf(amount)))
-                    .setCurrency(CURRENCY)
-                    .setCustomer(params.getName())
                     .build();
             Map<String,String> metadata = new HashMap<>();
             metadata.put("amount",String.valueOf(amount));
-            metadata.put("currency",CURRENCY);
-            metadata.put("confirmed_at", String.valueOf(createParams.getConfirm()));
-            metadata.put("client_name",params.getName());
+            metadata.put("currency",USD_CURRENCY);
+            PaymentIntentCreateParams createParams = PaymentIntentCreateParams
+                    .builder()
+                    .setAmount(Long.valueOf(String.valueOf(amount)))
+                    .setCurrency(USD_CURRENCY)
+                    .setCustomer(params.getName())
+                    .putAllMetadata(metadata)
+                    .build();
             addHeaders(headers);
+            var card = cardRepository.findByCardNumber(userRequest.getCardNumber())
+                            .orElseThrow(CardNotFoundException::new);
             log.info("Added headers is: {}",metadata);
             var pay = PaymentIntent.create(createParams);
-            pay.setMetadata(metadata);
-            publishEvent(amount,params.getPaymentMethod()
-                    ,userRequest.getEmail(),
+            var payForSave = paymentMapper.mapToPaymentEntity(pay,card);
+            paymentRepository.save(payForSave);
+            log.info("[Saved payment: {}]",payForSave.getId());
+            publishEvent(amount,
+                    params.getPaymentMethod(),
+                    userRequest.getEmail(),
                     userRequest.getCardNumber());
             var paymentJsonString = mapFromGsonToJackson(pay);
             objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
             redisService.writeObjectInRedis(pay.getId(), paymentJsonString);
-            log.info("Created payment: {}", pay.getAmount());
+            log.info("[Created payment: {}]", pay.getAmount());
         } catch (StripeException e) {
-            log.error("Exception is: {}", e.getMessage());
+            log.error("[Exception is: {}]", e.getMessage());
         }
     }
 
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public PaymentIntent cancelPayment(String paymentId) {
+        try {
+            PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentId);
+            PaymentIntentCancelParams params = PaymentIntentCancelParams.builder()
+                    .setCancellationReason(PaymentIntentCancelParams.CancellationReason.REQUESTED_BY_CUSTOMER)
+                    .build();
+            return paymentIntent.cancel(params);
+        }catch (StripeException e){
+            log.error("[Can't make payment: {}]",paymentId);
+            return null;
+        }
+    }
+
+    @Override
+    public PaymentIntent confirmPayment(String paymentId, String paymentMethod) {
+        try {
+            PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentId);
+            PaymentIntentConfirmParams params = PaymentIntentConfirmParams.builder()
+                    .setReturnUrl("")
+                    .setPaymentMethod(paymentMethod)
+                    .build();
+            return paymentIntent.confirm(params);
+        }catch (StripeException e){
+            log.error("[Can't confirm payment: {}]",paymentId);
+            return null;
+        }
+    }
+
+    @Override
+    public PaymentIntent getPaymentStatus(String paymentId) {
+        try {
+            var paymentStatus =  PaymentIntent.retrieve(paymentId);
+            log.info("[Status of payment: {}]",paymentStatus);
+            return paymentStatus;
+        }catch (StripeException e){
+            log.error("[Can't get status of payment: {}]",paymentId);
+            return null;
+        }
+    }
 
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void addHeaders(Map<String,String> headers){
         if (!headers.containsValue(apiKey)){
-            throw new IllegalArgumentException("Headers can't be null!");
+            throw new IllegalArgumentException("[Headers can't be null!]");
         }
         MultiValueMap<String,String> map = new LinkedMultiValueMap<>();
         for(Map.Entry<String,String> headerMap:headers.entrySet()){
@@ -138,7 +174,7 @@ public class PaymentServiceImpl implements PaymentService {
         httpHeaders.setCacheControl(CacheControl.maxAge(Duration.ofMinutes(5)));
         httpHeaders.setContentLanguage(Locale.of(RU_LOCALE));
         httpHeaders.set("X-Request-ID",apiKey);
-        log.info("Http Headers is: {}, {}, {}",headers.keySet(),headers.entrySet(),httpHeaders.asSingleValueMap());
+        log.info("[Http Headers is: {}, {}, {}]",headers.keySet(),headers.entrySet(),httpHeaders.asSingleValueMap());
     }
 
 
@@ -151,7 +187,7 @@ public class PaymentServiceImpl implements PaymentService {
             JsonNode jsonNode = objectMapper.readTree(gsonString);
             return objectMapper.writeValueAsString(jsonNode);
         } catch (JsonProcessingException e) {
-            log.error("Json exception is: {}", e.getMessage());
+            log.error("[Json exception is: {}]", e.getMessage());
             return null;
         }
 
@@ -169,6 +205,9 @@ public class PaymentServiceImpl implements PaymentService {
                 cardNumber
         ));
     }
+
+
+
 
 
 

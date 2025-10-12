@@ -65,7 +65,7 @@ public class CommentServiceImpl implements CommentService {
         comment.setCreatedAt(LocalDateTime.now());
         var user = userRepository.findById(userId)
                         .orElseThrow(()->new UserNotFoundException(
-                                MessageFormat.format("User with id: {0} not found",userId)));
+                                MessageFormat.format("[User with id: {0} not found]",userId)));
         List<CommentEntity> comments = user.getComments();
         comments.add(comment);
         commentRepository.save(comment);
@@ -74,7 +74,7 @@ public class CommentServiceImpl implements CommentService {
         publishEvent(comment);
         comment.setUser(user);
         userRepository.save(user);
-        log.info("User with username: {} add comment: {}", user.getUsername(), commentRequest.getComment());
+        log.info("[User with username: {} add comment: {}]", user.getUsername(), commentRequest.getComment());
 
     }
 
@@ -101,7 +101,7 @@ public class CommentServiceImpl implements CommentService {
         String cacheKey = Objects.toString(id);
         var comment = commentRepository.findById(id)
                 .orElseThrow(()->new CommentNotFoundException(
-                        MessageFormat.format("Comment with id: {0} not found",id)));
+                        MessageFormat.format("[Comment with id: {0} not found]",id)));
         if (redisService.checkKeyExist(cacheKey)){
             return commentMapper.mapToDto(comment);
         }
@@ -109,7 +109,7 @@ public class CommentServiceImpl implements CommentService {
             String jsonValue = objectMapper.writeValueAsString(comment);
             redisService.writeObjectInRedis(cacheKey,jsonValue);
         }catch (JsonProcessingException e){
-            log.error("Cant put value in cache: {}",comment.toString());
+            log.error("[Cant put value in cache: {}]",comment.toString());
         }
         return commentMapper.mapToDto(comment);
     }
@@ -118,7 +118,7 @@ public class CommentServiceImpl implements CommentService {
     @Loggable
     public ListCommentResponse getCommentsByIds(List<Long> ids) {
         var comments = commentRepository.findAllById(ids);
-        log.info("Comments: {}",comments.toString());
+        log.info("[Comments: {}]",comments.toString());
         var keyOfComments = comments.stream()
                 .map(c->c.getId().toString())
                 .collect(Collectors.toSet());
@@ -170,11 +170,11 @@ public class CommentServiceImpl implements CommentService {
         var commentForDelete = commentMapper.mapToEntity(getCommentById(commentId));
          if (!commentRepository.existsById(commentId)){
              throw new CommentNotFoundException(
-                     MessageFormat.format("Comment with id: {0} not found",commentId));
+                     MessageFormat.format("[Comment with id: {0} not found]",commentId));
          }
          redisService.deleteCacheByKey(String.valueOf(commentId));
          commentRepository.deleteById(commentId);
-         log.info("Deleted comment: {}, user of comment: {}",
+         log.info("[Deleted comment: {}, user of comment: {}]",
                  commentForDelete.getComment(),
                  commentForDelete.getUser().getId()
          );
@@ -185,7 +185,7 @@ public class CommentServiceImpl implements CommentService {
     @Transactional
     public void deleteComments(List<Long> commentIds) {
         if (commentIds.isEmpty()){
-            throw new IllegalArgumentException("CommentList is empty!");
+            throw new IllegalArgumentException("[CommentList is empty!]");
         }
         var commentsForDelete = commentRepository.findAllById(commentIds)
                         .stream()
@@ -195,9 +195,9 @@ public class CommentServiceImpl implements CommentService {
                             commentRepository.deleteAllByIdInBatch(commentIds);
                             var deletedComment = commentEntity.getComment();
                             var ownerOfComment = commentEntity.getUser().getUsername();
-                            log.info("Deleted comment: {}, Owner: {}",deletedComment,ownerOfComment);
+                            log.info("[Deleted comment: {}, Owner: {}]",deletedComment,ownerOfComment);
                         }).collect(Collectors.toSet());
-        log.info("Deleted comments: {}",commentsForDelete);
+        log.info("[Deleted comments: {}]",commentsForDelete);
 
     }
 
@@ -215,10 +215,10 @@ public class CommentServiceImpl implements CommentService {
                     commentRepository.save(commentEntity);
                     userRepository.save(user);
                     publishUpdatedEvent(commentEntity);
-                    log.info("Edited comment: {}, User which update comment: {}",commentEntity.getComment(),userId);
+                    log.info("[Edited comment: {}, User which update comment: {}]",commentEntity.getComment(),userId);
                 })
                 .map(commentMapper::mapToDto)
-                .forEach(updatedComment->log.info("Comment {} is updated!",commentUpdateRequest));
+                .forEach(updatedComment->log.info("[Comment {} is updated!]",commentUpdateRequest));
     }
 
     @Override
@@ -242,11 +242,11 @@ public class CommentServiceImpl implements CommentService {
                     redisService.writeObjectInRedis(commentEvent.getComment(), message));
             CompletableFuture.allOf(kafkaFuture, redisFuture)
                     .exceptionally(throwable -> {
-                        log.error("Error processing comment event: {}", throwable.getMessage());
+                        log.error("[Error processing comment event: {}]", throwable.getMessage());
                         return null;
                     });
         } catch (JsonProcessingException e) {
-            log.error("Can't serialize comment message: {}", e.getMessage());
+            log.error("[Can't serialize comment message: {}]", e.getMessage());
         }
     }
 
@@ -258,7 +258,7 @@ public class CommentServiceImpl implements CommentService {
                 commentUpdatedEvent.getNewComment()
         );
         kafkaService.sendMessage(String.valueOf(commentUpdatedEvent));
-        log.info("Handle Updating of comment: id: {}, new comment: {}",
+        log.info("[Handle Updating of comment: id: {}, new comment: {}]",
                 commentUpdatedEvent.getCommentId(),
                 commentUpdatedEvent.getNewComment()
         );

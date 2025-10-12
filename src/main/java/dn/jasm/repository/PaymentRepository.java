@@ -3,7 +3,7 @@ package dn.jasm.repository;
 import dn.jasm.entity.PaymentEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
+public interface PaymentRepository extends JpaRepository<PaymentEntity, String> {
 
 
 }

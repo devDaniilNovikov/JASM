@@ -3,13 +3,19 @@ package dn.jasm.mapper;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
 import dn.jasm.entity.UserEntity;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class UserMapper {
+
+    private final CardMapper cardMapper;
+    private final OrderMapper orderMapper;
+    private final ItemMapper itemMapper;
 
 
     public UserResponse mapToDto(UserEntity user){

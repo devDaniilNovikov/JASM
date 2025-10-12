@@ -6,11 +6,19 @@ import dn.jasm.dto.user.UserRequest;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.Optional;
 
 public interface PaymentService {
 
     void createPayment(UserRequest userRequest,
                        BigDecimal amount,
-                       Map<String,String> headers,
-                       String paymentMethod);
+                       Map<String,String> headers);
+
+    PaymentIntent cancelPayment(String paymentId);
+
+    PaymentIntent confirmPayment(String paymentId,
+                                 String paymentMethod);
+
+    PaymentIntent getPaymentStatus(String paymentId);
+
 }

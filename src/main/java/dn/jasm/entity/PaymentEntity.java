@@ -2,8 +2,7 @@ package dn.jasm.entity;
 
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 
@@ -11,7 +10,13 @@ import java.math.BigDecimal;
 @Table(schema = "jasm",name = "payment")
 @Getter
 @Setter
-public class PaymentEntity extends BasedEntity {
+@NoArgsConstructor
+@AllArgsConstructor
+public class PaymentEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
 
 
@@ -27,5 +32,7 @@ public class PaymentEntity extends BasedEntity {
     private BigDecimal amount;
 
     private String currency;
+
+
 
 }

@@ -9,6 +9,7 @@ public enum EventType {
     ORDER_CREATE,
     TRANSACTION,
     MAIL_MESSAGE,
-    TICKET_CREATED
+    TICKET_CREATED,
+    PAYMENT_COMPLETED
 }
 

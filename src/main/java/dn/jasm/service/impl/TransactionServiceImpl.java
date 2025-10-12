@@ -131,13 +131,13 @@ public class TransactionServiceImpl implements TransactionService {
         var balance = user.getBalance();
         if (balance.compareTo(BigDecimal.ZERO)<=0){
             throw new IllegalArgumentException(
-                    MessageFormat.format("Balance of user: {0} is null",user.getBalance()));
+                    MessageFormat.format("[Balance of user: {0} is null]",user.getBalance()));
 
         }
         if (order.getAmount().compareTo(balance)>0){
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Insufficient balance {0} for order amount: {1}",
+                            "[Insufficient balance {0} for order amount: {1}]",
                             balance,order.getAmount()));
         }
     }
@@ -159,7 +159,7 @@ public class TransactionServiceImpl implements TransactionService {
                 var txId = transactionEvent.getTxId();
                 var transaction = transactionRepository.findById(txId)
                         .orElseThrow(() -> new TransactionNotFoundException(
-                                MessageFormat.format("Transaction with id: {0} not found", transactionEvent.getTxId())
+                                MessageFormat.format("[Transaction with id: {0} not found]", transactionEvent.getTxId())
                         ));
                 var cardForTx = cardRepository.findById(transactionEvent.getCardId())
                         .orElseThrow(RuntimeException::new);
@@ -169,13 +169,13 @@ public class TransactionServiceImpl implements TransactionService {
                 var txStatus = transaction.getTransactionStatus();
                 var cacheTx = transactionMapper.mapToDto(transaction);
                 redisService.writeObjectInRedis(String.valueOf(txId),cacheTx);
-                log.info("Successfully processing of transaction with id: {}, status: {} ", txId, txStatus);
+                log.info("[Successfully processing of transaction with id: {}, status: {}]", txId, txStatus);
             } catch (Exception e) {
-                log.error("Exception in processing of transaction: {}",e.getMessage());
+                log.error("[Exception in processing of transaction: {}]",e.getMessage());
                 throw new RuntimeException(e);
             }
         }
-        log.info("Total balance of user is: {}",userTotalBalance);
+        log.info("[Total balance of user is: {}]",userTotalBalance);
     }
 
 
@@ -185,7 +185,7 @@ public class TransactionServiceImpl implements TransactionService {
     public void cancelTransaction(Long txId) {
         TransactionEntity transactionEntity = transactionRepository.findById(txId)
                 .orElseThrow(() -> new TransactionNotFoundException(
-                        MessageFormat.format("Transaction with id: {0} not found", txId)));
+                        MessageFormat.format("[Transaction with id: {0} not found]", txId)));
         if (transactionEntity.getUser() != null) {
             UserEntity user = transactionEntity.getUser();
             user.setTransactionEntity(null);
@@ -222,14 +222,14 @@ public class TransactionServiceImpl implements TransactionService {
                        })
                 .toList();
         transactionRepository.saveAll(requireTransactions);
-        log.info("Cancelled transactions is: {}",requireTransactions);
+        log.info("[Cancelled transactions is: {}]",requireTransactions);
 
     }
 
     @Override
     public SetTransactionDto getTransactionSet(int pageNumber, int pageSize) {
         if (pageSize==0){
-            throw new IllegalArgumentException("PageSize can't be null");
+            throw new IllegalArgumentException("[PageSize can't be null]");
         }
         PageRequest pageRequest = PageRequest.ofSize(pageSize).withPage(pageNumber);
         Set<TransactionEntity> txSet = transactionRepository.findAll(pageRequest)
@@ -256,7 +256,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
         transactionRepository.save(tx);
         transactionRepository.delete(tx);
-        log.info("Deleted tx is: {}", tx.getId());
+        log.info("[Deleted tx is: {}]", tx.getId());
     }
 }
 
