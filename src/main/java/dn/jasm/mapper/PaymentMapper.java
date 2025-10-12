@@ -33,10 +33,11 @@ public class PaymentMapper {
         PaymentEntity payment = new PaymentEntity();
         payment.setAmount(BigDecimal.valueOf(paymentIntent.getAmount()));
         payment.setCurrency(paymentIntent.getCurrency());
-        payment.setId(payment.getId());
+        payment.setId(paymentIntent.getId());
         var cardForPayment = cardRepository.findById(card.getId())
                 .orElseThrow(CardNotFoundException::new);
         payment.setCard(cardForPayment);
+        payment.setPaymentStatus(PaymentStatus.PROCESSING);
         return payment;
     }
 

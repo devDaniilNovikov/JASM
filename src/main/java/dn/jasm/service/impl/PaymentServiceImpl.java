@@ -11,6 +11,9 @@ import com.stripe.net.ApiRequestParams.EnumParam.*;
 import com.stripe.model.*;
 import com.stripe.param.*;
 import com.stripe.param.SetupIntentCreateParams.PaymentMethodOptions.AcssDebit.Currency;
+import dn.jasm.entity.CardEntity;
+import dn.jasm.entity.PaymentEntity;
+import dn.jasm.entity.enums.PaymentStatus;
 import dn.jasm.event.PaymentEvent;
 import dn.jasm.exception.CardNotFoundException;
 import dn.jasm.mapper.PaymentMapper;
@@ -78,28 +81,23 @@ public class PaymentServiceImpl implements PaymentService {
                               BigDecimal amount,
                               Map<String,String> headers) {
         try {
+            var card = cardRepository.findByCardNumber(userRequest.getCardNumber())
+                    .orElseThrow(CardNotFoundException::new);
             CustomerCreateParams params = CustomerCreateParams.builder()
                     .setEmail(userRequest.getEmail())
                     .setPhone(userRequest.getPhoneNumber())
                     .setName(userRequest.getUsername())
                     .build();
-            Map<String,String> metadata = new HashMap<>();
-            metadata.put("amount",String.valueOf(amount));
-            metadata.put("currency",USD_CURRENCY);
             PaymentIntentCreateParams createParams = PaymentIntentCreateParams
                     .builder()
                     .setAmount(Long.valueOf(String.valueOf(amount)))
                     .setCurrency(USD_CURRENCY)
                     .setCustomer(params.getName())
-                    .putAllMetadata(metadata)
                     .build();
-            addHeaders(headers);
-            var card = cardRepository.findByCardNumber(userRequest.getCardNumber())
-                            .orElseThrow(CardNotFoundException::new);
-            log.info("Added headers is: {}",metadata);
+            addHttpHeaders(headers, amount);
             var pay = PaymentIntent.create(createParams);
             var payForSave = paymentMapper.mapToPaymentEntity(pay,card);
-            paymentRepository.save(payForSave);
+            paymentRepository.saveAndFlush(payForSave);
             log.info("[Saved payment: {}]",payForSave.getId());
             publishEvent(amount,
                     params.getPaymentMethod(),
@@ -112,6 +110,16 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (StripeException e) {
             log.error("[Exception is: {}]", e.getMessage());
         }
+    }
+
+    private Map<String,String> addHttpHeaders(Map<String,String> headers,
+                                              BigDecimal amount){
+        Map<String,String> metadata = new HashMap<>();
+        metadata.put("amount",String.valueOf(amount));
+        metadata.put("currency",USD_CURRENCY);
+        metadata.put("status",PaymentStatus.PROCESSING.name());
+        HttpHeaders httpHeaders = HttpHeaders.readOnlyHttpHeaders(MultiValueMap.fromSingleValue(metadata));
+        return httpHeaders.asSingleValueMap();
     }
 
     @Override
@@ -145,19 +153,21 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public PaymentIntent getPaymentStatus(String paymentId) {
+    public String getPaymentStatus(String paymentId) {
         try {
-            var paymentStatus =  PaymentIntent.retrieve(paymentId);
-            log.info("[Status of payment: {}]",paymentStatus);
-            return paymentStatus;
+            var paymentIntent = PaymentIntent.retrieve(paymentId);
+            var card = cardRepository.findByPaymentEntity_Id(paymentId);
+            var response = paymentMapper.mapToPaymentEntity(paymentIntent,card);
+            log.info("[Payment intent: {}]",paymentIntent.getStatus());
+            return response.getPaymentStatus().name();
         }catch (StripeException e){
-            log.error("[Can't get status of payment: {}]",paymentId);
+            log.error("[Can't get status of payment: {}, error: {}]",paymentId,e.getMessage());
             return null;
         }
     }
 
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+
     public void addHeaders(Map<String,String> headers){
         if (!headers.containsValue(apiKey)){
             throw new IllegalArgumentException("[Headers can't be null!]");

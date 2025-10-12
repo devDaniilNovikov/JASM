@@ -23,4 +23,5 @@ public interface CardRepository extends JpaRepository<CardEntity,Long> {
     Page<CardEntity> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
 
 
+    CardEntity findByPaymentEntity_Id(String paymentEntityId);
 }

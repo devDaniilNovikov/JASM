@@ -32,6 +32,7 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping(CREATE_CHARGE)
+    @ResponseStatus(HttpStatus.CREATED)
     public void createPayment(@RequestBody  UserRequest userRequest,
                               @RequestParam  BigDecimal amount,
                               @RequestHeader(required = true) Map<String,String> headers){
@@ -39,7 +40,8 @@ public class PaymentController {
     }
     
     @GetMapping(GET_PAYMENT_STATUS)
-    public PaymentIntent getPaymentStatus(@PathVariable String id){
+    @ResponseStatus(HttpStatus.OK)
+    public String getPaymentStatus(@PathVariable String id){
         return paymentService.getPaymentStatus(id);
                 
     }

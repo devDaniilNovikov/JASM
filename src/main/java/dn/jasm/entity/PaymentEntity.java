@@ -1,6 +1,7 @@
 package dn.jasm.entity;
 
 
+import dn.jasm.entity.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,7 +16,6 @@ import java.math.BigDecimal;
 public class PaymentEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
 
@@ -32,6 +32,9 @@ public class PaymentEntity {
     private BigDecimal amount;
 
     private String currency;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
 
 
 

@@ -19,6 +19,6 @@ public interface PaymentService {
     PaymentIntent confirmPayment(String paymentId,
                                  String paymentMethod);
 
-    PaymentIntent getPaymentStatus(String paymentId);
+    String getPaymentStatus(String paymentId);
 
 }
