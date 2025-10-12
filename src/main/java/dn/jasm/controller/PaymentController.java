@@ -34,9 +34,8 @@ public class PaymentController {
     @PostMapping(CREATE_CHARGE)
     @ResponseStatus(HttpStatus.CREATED)
     public void createPayment(@RequestBody  UserRequest userRequest,
-                              @RequestParam  BigDecimal amount,
-                              @RequestHeader(required = true) Map<String,String> headers){
-        paymentService.createPayment(userRequest, amount, headers);
+                              @RequestParam  BigDecimal amount){
+        paymentService.createPayment(userRequest, amount);
     }
     
     @GetMapping(GET_PAYMENT_STATUS)

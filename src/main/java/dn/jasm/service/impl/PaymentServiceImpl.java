@@ -33,6 +33,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.RedisKeyExpiredEvent;
 import org.springframework.http.*;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -48,6 +49,7 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -60,14 +62,17 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${account.secret.id}")
     private String accountId;
 
-    private static final String USD_CURRENCY = Currency.USD.getValue().trim().toLowerCase();
+    private static final String USD_CURRENCY = Currency.USD
+            .getValue()
+            .trim()
+            .toLowerCase();
+
     private final ObjectMapper objectMapper;
     private final RedisService redisService;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final CardRepository cardRepository;
-    private final UserMapper userMapper;
 
 
 
@@ -80,20 +85,15 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createPayment(UserRequest userRequest,
-                              BigDecimal amount,
-                              Map<String,String> headers) {
+                              BigDecimal amount) {
         CardEntity card = cardRepository.findByCardNumber(userRequest.getCardNumber())
                 .orElseThrow(CardNotFoundException::new);
-        Customer client = buildCustomer(userRequest);
         PaymentIntent payment = buildPayment(userRequest,amount);
-        payment.setCustomer(client.getId());
-        var payForSave = paymentMapper.mapToPaymentEntity(payment,card);
-        paymentRepository.saveAndFlush(payForSave);
-        log.info("[Saved payment: {}]",payForSave.getId());
-        publishEvent(amount,
-                userRequest.getEmail(),
-                userRequest.getCardNumber());
-        var paymentJsonString = mapFromGsonToJackson(payment);
+        PaymentEntity paymentEntity = paymentMapper.mapToPaymentEntity(payment,card);
+        paymentRepository.saveAndFlush(paymentEntity);
+        log.info("[Saved payment: {}]",paymentEntity.getId());
+        publishEvent(amount, userRequest.getEmail(), userRequest.getCardNumber());
+        String paymentJsonString = mapFromGsonToJackson(payment);
         objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
         redisService.writeObjectInRedis(payment.getId(), paymentJsonString);
         log.info("[Created payment: {}]", payment.getAmount());
@@ -168,18 +168,18 @@ public class PaymentServiceImpl implements PaymentService {
                     .setCustomer(userRequest.getUsername())
                     .setReceiptEmail(userRequest.getEmail())
                     .build();
-            return PaymentIntent.create(createParams);
+            var payment =  PaymentIntent.create(createParams);
+            var client = buildCustomer(userRequest);
+            payment.setCustomer(client.getId());
+            Map<String,String> metadata = addMetadata(amount,USD_CURRENCY,client.getId());
+            payment.setMetadata(metadata);
+            log.error("[Metadata keys: {}, value: {}]",metadata.keySet(),metadata.values());
+            return payment;
         }catch (StripeException e){
             log.error("[Can't build payment, error: {}".toUpperCase(),e.getMessage());
             throw new RuntimeException();
         }
     }
-
-
-
-
-
-
 
     private String mapFromGsonToJackson(PaymentIntent paymentIntent) {
         try {
@@ -204,6 +204,17 @@ public class PaymentServiceImpl implements PaymentService {
                 cardNumber
         ));
     }
+
+    public Map<String,String> addMetadata(BigDecimal amount,
+                            String currency,
+                            String customerId){
+        Map<String,String> headers = new HashMap<>();
+        headers.put("amount",String.valueOf(amount));
+        headers.put("currency",currency);
+        headers.put("customerId",customerId);
+        return headers;
+    }
+
 
 
 

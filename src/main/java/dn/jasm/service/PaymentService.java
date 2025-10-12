@@ -11,8 +11,7 @@ import java.util.Optional;
 public interface PaymentService {
 
     void createPayment(UserRequest userRequest,
-                       BigDecimal amount,
-                       Map<String,String> headers);
+                       BigDecimal amount);
 
     PaymentIntent cancelPayment(String paymentId);
 
