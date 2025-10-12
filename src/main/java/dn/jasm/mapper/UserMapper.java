@@ -30,6 +30,17 @@ public class UserMapper {
                 .build();
     }
 
+    public UserEntity mapToEntity(UserResponse userResponse){
+        UserEntity user = new UserEntity();
+        user.setId(userResponse.getId());
+        user.setEmail(userResponse.getEmail());
+        user.setBalance(userResponse.getBalance());
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUsername(userResponse.getUsername());
+        user.setPhoneNumber(user.getPhoneNumber());
+        return user;
+    }
+
     public UserResponseList mapToDtoList(List<UserEntity> users){
         UserResponseList userResponseList = new UserResponseList();
         userResponseList.setUsers(users.stream()

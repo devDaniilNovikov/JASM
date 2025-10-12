@@ -11,12 +11,14 @@ import com.stripe.net.ApiRequestParams.EnumParam.*;
 import com.stripe.model.*;
 import com.stripe.param.*;
 import com.stripe.param.SetupIntentCreateParams.PaymentMethodOptions.AcssDebit.Currency;
+import dn.jasm.dto.user.UserResponse;
 import dn.jasm.entity.CardEntity;
 import dn.jasm.entity.PaymentEntity;
 import dn.jasm.entity.enums.PaymentStatus;
 import dn.jasm.event.PaymentEvent;
 import dn.jasm.exception.CardNotFoundException;
 import dn.jasm.mapper.PaymentMapper;
+import dn.jasm.mapper.UserMapper;
 import dn.jasm.repository.*;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.service.ItemService;
@@ -58,14 +60,14 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${account.secret.id}")
     private String accountId;
 
-    private static final String USD_CURRENCY = Currency.USD.getValue().toLowerCase();
-    private static final String RU_LOCALE = "ru";
+    private static final String USD_CURRENCY = Currency.USD.getValue().trim().toLowerCase();
     private final ObjectMapper objectMapper;
     private final RedisService redisService;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final CardRepository cardRepository;
+    private final UserMapper userMapper;
 
 
 
@@ -76,51 +78,27 @@ public class PaymentServiceImpl implements PaymentService {
 
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createPayment(UserRequest userRequest,
                               BigDecimal amount,
                               Map<String,String> headers) {
-        try {
-            var card = cardRepository.findByCardNumber(userRequest.getCardNumber())
-                    .orElseThrow(CardNotFoundException::new);
-            CustomerCreateParams params = CustomerCreateParams.builder()
-                    .setEmail(userRequest.getEmail())
-                    .setPhone(userRequest.getPhoneNumber())
-                    .setName(userRequest.getUsername())
-                    .build();
-            PaymentIntentCreateParams createParams = PaymentIntentCreateParams
-                    .builder()
-                    .setAmount(Long.valueOf(String.valueOf(amount)))
-                    .setCurrency(USD_CURRENCY)
-                    .setCustomer(params.getName())
-                    .build();
-            addHttpHeaders(headers, amount);
-            var pay = PaymentIntent.create(createParams);
-            var payForSave = paymentMapper.mapToPaymentEntity(pay,card);
-            paymentRepository.saveAndFlush(payForSave);
-            log.info("[Saved payment: {}]",payForSave.getId());
-            publishEvent(amount,
-                    params.getPaymentMethod(),
-                    userRequest.getEmail(),
-                    userRequest.getCardNumber());
-            var paymentJsonString = mapFromGsonToJackson(pay);
-            objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-            redisService.writeObjectInRedis(pay.getId(), paymentJsonString);
-            log.info("[Created payment: {}]", pay.getAmount());
-        } catch (StripeException e) {
-            log.error("[Exception is: {}]", e.getMessage());
-        }
+        CardEntity card = cardRepository.findByCardNumber(userRequest.getCardNumber())
+                .orElseThrow(CardNotFoundException::new);
+        Customer client = buildCustomer(userRequest);
+        PaymentIntent payment = buildPayment(userRequest,amount);
+        payment.setCustomer(client.getId());
+        var payForSave = paymentMapper.mapToPaymentEntity(payment,card);
+        paymentRepository.saveAndFlush(payForSave);
+        log.info("[Saved payment: {}]",payForSave.getId());
+        publishEvent(amount,
+                userRequest.getEmail(),
+                userRequest.getCardNumber());
+        var paymentJsonString = mapFromGsonToJackson(payment);
+        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+        redisService.writeObjectInRedis(payment.getId(), paymentJsonString);
+        log.info("[Created payment: {}]", payment.getAmount());
     }
 
-    private Map<String,String> addHttpHeaders(Map<String,String> headers,
-                                              BigDecimal amount){
-        Map<String,String> metadata = new HashMap<>();
-        metadata.put("amount",String.valueOf(amount));
-        metadata.put("currency",USD_CURRENCY);
-        metadata.put("status",PaymentStatus.PROCESSING.name());
-        HttpHeaders httpHeaders = HttpHeaders.readOnlyHttpHeaders(MultiValueMap.fromSingleValue(metadata));
-        return httpHeaders.asSingleValueMap();
-    }
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
@@ -166,26 +144,39 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
-
-
-    public void addHeaders(Map<String,String> headers){
-        if (!headers.containsValue(apiKey)){
-            throw new IllegalArgumentException("[Headers can't be null!]");
+    public Customer buildCustomer(UserRequest userRequest){
+        try {
+            CustomerCreateParams params = CustomerCreateParams.builder()
+                    .setEmail(userRequest.getEmail())
+                    .setPhone(userRequest.getPhoneNumber())
+                    .setName(userRequest.getUsername())
+                    .build();
+            return Customer.create(params);
+        } catch (StripeException e) {
+            log.error("[Can't create customer: {}, error: {}]",e.getMessage(),e.getStripeError());
+            throw new RuntimeException();
         }
-        MultiValueMap<String,String> map = new LinkedMultiValueMap<>();
-        for(Map.Entry<String,String> headerMap:headers.entrySet()){
-            String key = headerMap.getKey();
-            String value = headerMap.getValue();
-            map.put(key,List.of(value));
-        }
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.addAll(map);
-        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
-        httpHeaders.setCacheControl(CacheControl.maxAge(Duration.ofMinutes(5)));
-        httpHeaders.setContentLanguage(Locale.of(RU_LOCALE));
-        httpHeaders.set("X-Request-ID",apiKey);
-        log.info("[Http Headers is: {}, {}, {}]",headers.keySet(),headers.entrySet(),httpHeaders.asSingleValueMap());
     }
+
+    public PaymentIntent buildPayment(UserRequest userRequest,
+                                      BigDecimal amount){
+        try {
+            PaymentIntentCreateParams createParams = PaymentIntentCreateParams
+                    .builder()
+                    .setAmount(Long.valueOf(String.valueOf(amount)))
+                    .setCurrency(USD_CURRENCY)
+                    .setCustomer(userRequest.getUsername())
+                    .setReceiptEmail(userRequest.getEmail())
+                    .build();
+            return PaymentIntent.create(createParams);
+        }catch (StripeException e){
+            log.error("[Can't build payment, error: {}".toUpperCase(),e.getMessage());
+            throw new RuntimeException();
+        }
+    }
+
+
+
 
 
 
@@ -204,13 +195,11 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void publishEvent(BigDecimal amount,
-                              String paymentMethod,
                               String email,
                               String cardNumber){
         eventPublisher.publishEvent(new PaymentEvent(
                 this,
                 amount,
-                paymentMethod,
                 email,
                 cardNumber
         ));

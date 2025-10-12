@@ -12,19 +12,16 @@ import java.math.BigDecimal;
 @Setter
 public class PaymentEvent extends ApplicationEvent implements BaseEvent  {
 
-    private BigDecimal amount;
-    private String paymentMethod;
+    private BigDecimal amount;;
     private String email;
     private String cardNumber;
 
     public PaymentEvent(Object source,
                         BigDecimal amount,
-                        String paymentMethod,
                         String email,
                         String cardNumber) {
         super(source);
         this.amount = amount;
-        this.paymentMethod = paymentMethod;
         this.email = email;
         this.cardNumber = cardNumber;
     }

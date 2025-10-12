@@ -50,4 +50,5 @@ public class UserRequest implements Serializable {
 
     private String cardNumber;
 
+
 }

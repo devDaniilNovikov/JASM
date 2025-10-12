@@ -1,6 +1,8 @@
 package dn.jasm.service.impl;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.aop.Loggable;
 import dn.jasm.exception.RedisKeyException;
 import dn.jasm.service.RedisService;
@@ -34,6 +36,7 @@ public class RedisServiceImpl implements RedisService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final SecureRandom secureRandom = new SecureRandom();
+    private final ObjectMapper objectMapper;
 
     public static void setPrefix(String keyPrefix){
         prefix = keyPrefix;
@@ -126,8 +129,14 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     @Transactional(readOnly = true)
-    public Object getByKey(String key) {
-       return redisTemplate.opsForValue().get(key);
+    public String getByKey(String key) {
+        try {
+            var cacheValue = redisTemplate.opsForValue().get(key);
+            return objectMapper.writeValueAsString(cacheValue);
+        }catch (JsonProcessingException e){
+            log.error("[Can't get cacheValue with key: {}]",key);
+            throw new RuntimeException();
+        }
     }
 
     @Override

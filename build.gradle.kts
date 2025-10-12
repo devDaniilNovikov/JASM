@@ -3,6 +3,7 @@ plugins {
     id("org.springframework.boot") version "3.5.3"
     id("io.spring.dependency-management") version "1.1.7"
 }
+val springCloudVersion by extra("2025.0.0")
 
 group = "dn"
 version = "0.0.1-SNAPSHOT"
@@ -64,6 +65,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.integration:spring-integration-websocket")
     implementation("org.springframework.integration:spring-integration-stomp")
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j")
     // https://mvnrepository.com/artifact/com.speedment.jpastreamer/jpastreamer-core
     runtimeOnly("org.postgresql:postgresql:42.7.7")
     compileOnly ("org.projectlombok:lombok:1.18.32")
@@ -76,6 +78,11 @@ dependencies {
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation(kotlin("stdlib-jdk8"))
+}
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
+    }
 }
 
 tasks.withType<Test> {

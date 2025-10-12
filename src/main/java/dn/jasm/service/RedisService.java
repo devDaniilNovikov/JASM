@@ -14,7 +14,7 @@ public interface RedisService {
 
     void deleteCacheByKey(String key);
 
-    Object getByKey(String key);
+    String getByKey(String key);
 
     Set<String> getKeySet(String keyPattern);
 
