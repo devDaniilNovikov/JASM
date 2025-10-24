@@ -1,14 +1,10 @@
 package dn.jasm.mapper;
 
 import dn.jasm.dto.card.CardResponse;
-import dn.jasm.dto.card.SetCardResponse;
-import dn.jasm.dto.card.SetCardResponse;
+import dn.jasm.dto.card.ListCardResponse;
 import dn.jasm.entity.CardEntity;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -20,8 +16,8 @@ public class CardMapper {
                 .id(cardEntity.getId().toString())
                 .cardNumber(cardEntity.getCardNumber())
                 .cvc(cardEntity.getCvc())
-                .date(cardEntity.getDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy||HH:mm")))
-                .dateOfAdding(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy||HH:mm")))
+                .expMonth(cardEntity.getExpMonth())
+                .expYear(cardEntity.getExpYear())
                 .build();
     }
 
@@ -31,9 +27,11 @@ public class CardMapper {
                 .collect(Collectors.toSet());
     }
 
-    public SetCardResponse mapToSetCardResponse(Set<CardEntity> cards){
-        SetCardResponse listCardResponse = new SetCardResponse();
-        listCardResponse.setCards(cards.stream().map(this::toDto).collect(Collectors.toSet()));
+    public ListCardResponse mapToSetCardResponse(Set<CardEntity> cards){
+        ListCardResponse listCardResponse = new ListCardResponse();
+        listCardResponse.setCards(cards.stream()
+                .map(this::toDto)
+                .collect(Collectors.toList()));
         return listCardResponse;
     }
 
@@ -42,7 +40,8 @@ public class CardMapper {
         card.setId(Long.valueOf(cardResponse.getId()));
         card.setCardNumber(cardResponse.getCardNumber());
         card.setCvc(cardResponse.getCvc());
-        card.setDate(LocalDateTime.parse(cardResponse.getDate()));
+        card.setExpMonth(cardResponse.getExpMonth());
+        card.setExpYear(cardResponse.getExpYear());
         return card;
     }
 

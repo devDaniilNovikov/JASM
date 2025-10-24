@@ -22,6 +22,8 @@ public class CardRequest {
     private String fio;
     @NotNull
     private CardType cardType;
+    private Long expMonth;
+    private Long expYear;
 
 
 }

@@ -1,10 +1,11 @@
 package dn.jasm.service.impl;
 
+import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.card.CardMapResponse;
 import dn.jasm.dto.card.CardResponse;
 import dn.jasm.service.RedisService;
 import dn.jasm.dto.card.CardRequest;
-import dn.jasm.dto.card.SetCardResponse;
+import dn.jasm.dto.card.ListCardResponse;
 import dn.jasm.entity.CardEntity;
 import dn.jasm.entity.TransactionEntity;
 import dn.jasm.entity.UserEntity;
@@ -25,8 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -52,7 +52,8 @@ public class CardServiceImpl implements CardService {
         card.setId(card.getId());
         card.setCardNumber(cardRequest.getCardNumber());
         card.setCvc(cardRequest.getCvc());
-        card.setDate(LocalDateTime.now());
+        card.setExpMonth(cardRequest.getExpMonth());
+        card.setExpYear(cardRequest.getExpYear());
         card.setCardType(cardRequest.getCardType());
         var userCards = user.getCards();
         userCards.add(card);
@@ -65,7 +66,9 @@ public class CardServiceImpl implements CardService {
         userRepository.save(user);
         publishEvent(card);
         var cacheValue = cardMapper.toDto(card);
-        redisService.writeObjectInRedis(cacheValue.getId(),cacheValue.toString());
+        redisService.putToCache(cacheValue.getId(),
+                cacheValue.toString(),
+                CacheNames.CARD_CACHE);
         log.info("[Saving of user with card: {}]",user.getCards());
         return cardMapper.toDto(card);
 
@@ -76,7 +79,8 @@ public class CardServiceImpl implements CardService {
         eventPublisher.publishEvent(
                 new CardCreateEvent(this,
                         card.getCardNumber(),
-                        card.getDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy | HH:mm")),
+                       card.getExpMonth(),
+                        card.getExpYear(),
                         card.getCvc(),
                         card.getId().toString())
         );
@@ -112,9 +116,9 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
-    public SetCardResponse getCardList(int pageNumber,
-                                       int pageSize,
-                                       Long userId) {
+    public ListCardResponse getCardList(int pageNumber,
+                                        int pageSize,
+                                        Long userId) {
         PageRequest pageRequest = PageRequest.of(pageNumber,pageSize);
         Page<CardEntity> cards = cardRepository.findAllByUserId(userId,pageRequest);
         var cacheKeys = cards.stream()
@@ -150,15 +154,14 @@ public class CardServiceImpl implements CardService {
             throw new IllegalArgumentException("[UserId can't be null!!!]");
         }
         CardMapResponse cardMapResponse = new CardMapResponse();
-        Map<String, Set<CardResponse>> map = new ConcurrentHashMap<>();
+        Map<String, List<CardResponse>> map = new ConcurrentHashMap<>();
         var cards = userRepository.findById(userId)
                 .stream()
                 .map(UserEntity::getCards)
                 .filter(Objects::nonNull)
                 .flatMap(Collection::stream)
                 .map(cardMapper::toDto)
-                .sorted(Comparator.comparing(CardResponse::getDateOfAdding))
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+                .toList();
         var username = userRepository.findById(userId)
                 .stream()
                 .map(UserEntity::getUsername)

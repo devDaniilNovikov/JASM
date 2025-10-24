@@ -1,4 +1,6 @@
 package dn.jasm.service;
+import dn.jasm.configuration.redis.CacheNames;
+
 import java.util.List;
 import java.util.Set;
 
@@ -14,13 +16,15 @@ public interface RedisService {
 
     void deleteCacheByKey(String key);
 
-    String getByKey(String key);
+    Object getFromCache(String key,CacheNames cacheNames);
 
     Set<String> getKeySet(String keyPattern);
 
     void deleteCachesByKeys(Set<String> keys);
 
     <T >void writeEventInRedis(T t);
+
+    void putToCache(String key, Object value, CacheNames cacheNames);
 
 
 

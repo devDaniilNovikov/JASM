@@ -2,12 +2,15 @@ package dn.jasm.configuration;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.StreamWriteFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.stripe.net.StripeResponse;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+@Component
 public class StripeResponseSerializer extends StdSerializer<StripeResponse> {
 
 

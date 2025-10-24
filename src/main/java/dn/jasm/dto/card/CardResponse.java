@@ -16,18 +16,7 @@ public class CardResponse {
     private String id;
     private String cardNumber;
     private String cvc;
-    private String date;
-    @JsonProperty(value = "date_of_adding")
-    private String dateOfAdding;
+    private Long expMonth;
+    private Long expYear;
 
-    @Override
-    public String toString() {
-        return "CardResponse{" +
-                "id='" + id + '\'' +
-                ", cardNumber='" + cardNumber + '\'' +
-                ", cvc='" + cvc + '\'' +
-                ", date='" + date + '\'' +
-                ", dateOfAdding='" + dateOfAdding + '\'' +
-                '}';
-    }
 }

@@ -2,7 +2,7 @@ package dn.jasm.controller;
 
 import dn.jasm.configuration.swagger.card.SwaggerCardAnnotation;
 import dn.jasm.dto.card.*;
-import dn.jasm.dto.card.SetCardResponse;
+import dn.jasm.dto.card.ListCardResponse;
 import dn.jasm.service.CardService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -59,9 +59,9 @@ public class CardController {
 
     @SwaggerCardAnnotation(operation = "Получение списка привязанных карт")
     @GetMapping(GET_LIST_OF_CARDS)
-    public SetCardResponse getCardList(@RequestParam(defaultValue = "10",required = false) int pageSize,
-                                       @RequestParam(defaultValue = "0",required = false) int pageNumber,
-                                       @RequestParam Long userId){
+    public ListCardResponse getCardList(@RequestParam(defaultValue = "10",required = false) int pageSize,
+                                        @RequestParam(defaultValue = "0",required = false) int pageNumber,
+                                        @RequestParam Long userId){
         return cardService.getCardList(pageNumber,pageSize,userId);
     }
 

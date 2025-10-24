@@ -29,6 +29,8 @@ public class CardEntity extends BasedEntity {
     @Column(nullable = false)
     private String cvc;
 
+    private String stripePaymentMethodId;
+
     @Column
     private BigDecimal balance;
 
@@ -37,6 +39,10 @@ public class CardEntity extends BasedEntity {
 
     @DateTimeFormat(pattern = "Mm/Yy")
     private LocalDateTime date;
+
+    private Long expMonth;
+
+    private Long expYear;
 
     @OneToMany(mappedBy = "card",fetch = FetchType.LAZY)
     private Set<TransactionEntity> transactions = new HashSet<>();

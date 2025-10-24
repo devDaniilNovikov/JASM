@@ -7,12 +7,12 @@ import lombok.Setter;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Getter
 @Setter
 public class CardMapResponse {
 
 
-    private Map<String, Set<CardResponse>> cardsOfUser = new HashMap<>();
+    private Map<String, List<CardResponse>> cardsOfUser = new HashMap<>();
 }

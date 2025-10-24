@@ -40,7 +40,7 @@ public class ItemEntity extends BasedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY,cascade = {CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH})
     @JoinColumn(name = "warehouse_id")
-    private WareHouseEntity wareHouse;
+    private StorageEntity wareHouse;
 
     private Integer discount;
 

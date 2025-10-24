@@ -35,7 +35,9 @@ public class TransactionSchedulerImpl implements TransactionScheduler {
                 .map(tx-> {
                     tx.getUser().setTransactionEntity(null);
                     tx.getOrderEntity().setTransactionEntity(null);
-                    long txCount = tx.getCard().getTransactions().size();
+                    long txCount = tx.getCard()
+                            .getTransactions()
+                            .size();
                     var txCountByCard = tx.getCard();
                     txCountByCard.setTransactions(new HashSet<>((int) txCount));
                     cardRepository.save(txCountByCard);

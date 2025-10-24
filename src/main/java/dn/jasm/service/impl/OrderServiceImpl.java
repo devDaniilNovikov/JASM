@@ -247,8 +247,9 @@ public class OrderServiceImpl implements OrderService {
             orderEntity.setPayedAt(true);
             orderEntity.setIsShipped(items
                     .stream()
-                            .map(ItemRequest::getIsShippable)
-                    .reduce(true, (t, f)-> true));
+                    .map(ItemRequest::getIsShippable)
+                    .reduce(true,
+                            (t, f)-> true));
             log.info("[Processed order status: {}, amount: {}, isShipped: {}]",
                     orderEntity.getOrderStatus(),
                     orderEntity.getAmount(),

@@ -14,5 +14,5 @@ public class OrderItemResponse {
     private Long userId;
     private Integer count;
     private BigDecimal totalAmount;
-    private List<ItemEntity> items = new ArrayList<>();
+    private List<ItemEntity> items;
 }

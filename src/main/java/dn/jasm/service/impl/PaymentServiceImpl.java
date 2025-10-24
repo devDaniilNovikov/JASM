@@ -1,4 +1,5 @@
 package dn.jasm.service.impl;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,8 +10,11 @@ import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.net.ApiRequestParams.EnumParam.*;
 import com.stripe.model.*;
+import com.stripe.net.HttpHeaders;
+import com.stripe.net.RequestOptions;
 import com.stripe.param.*;
 import com.stripe.param.SetupIntentCreateParams.PaymentMethodOptions.AcssDebit.Currency;
+import dn.jasm.dto.payment.PaymentResponse;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.entity.CardEntity;
 import dn.jasm.entity.PaymentEntity;
@@ -47,6 +51,7 @@ import org.springframework.web.context.support.ServletRequestHandledEvent;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Stream;
@@ -59,8 +64,13 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${stripe.secret.api-key}")
     private String apiKey;
 
-    @Value("${account.secret.id}")
+    @Value("${stripe.account.key}")
     private String accountId;
+
+    private static final String RETURN_URL = "http://localhost:3000/api/v1/charge/create";
+    private static final String PAYMENT_METHOD = "pm_card_visa";
+    private static final String PAYMENT_METHOD_TYPE = "card";
+
 
     private static final String USD_CURRENCY = Currency.USD
             .getValue()
@@ -86,58 +96,57 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createPayment(UserRequest userRequest,
                               BigDecimal amount) {
-        CardEntity card = cardRepository.findByCardNumber(userRequest.getCardNumber())
+            CardEntity card = cardRepository.findByCardNumber(userRequest.getCardNumber())
                 .orElseThrow(CardNotFoundException::new);
-        PaymentIntent payment = buildPayment(userRequest,amount);
-        PaymentEntity paymentEntity = paymentMapper.mapToPaymentEntity(payment,card);
-        paymentRepository.saveAndFlush(paymentEntity);
-        log.info("[Saved payment: {}]",paymentEntity.getId());
-        publishEvent(amount, userRequest.getEmail(), userRequest.getCardNumber());
-        String paymentJsonString = mapFromGsonToJackson(payment);
-        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-        redisService.writeObjectInRedis(payment.getId(), paymentJsonString);
-        log.info("[Created payment: {}]", payment.getAmount());
+            PaymentIntent payment = buildPayment(userRequest, amount, accountId);
+            PaymentEntity paymentEntity = paymentMapper.mapToPaymentEntity(payment, card);
+            paymentRepository.save(paymentEntity);
+            log.info("[Saved payment: {}]", paymentEntity.getId());
+            publishEvent(amount, userRequest.getEmail(), userRequest.getCardNumber());
+            String paymentJsonString = mapFromGsonToJackson(payment);
+            objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+            redisService.writeObjectInRedis(payment.getId(), paymentJsonString);
+            log.info("[Created payment: {}]", payment.getAmount());
     }
 
 
     @Override
-    @Transactional(propagation = Propagation.MANDATORY)
+    @Transactional
+    @JsonIgnoreProperties(value = "lastResponse")
     public PaymentIntent cancelPayment(String paymentId) {
         try {
             PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentId);
             PaymentIntentCancelParams params = PaymentIntentCancelParams.builder()
-                    .setCancellationReason(PaymentIntentCancelParams.CancellationReason.REQUESTED_BY_CUSTOMER)
+                    .setCancellationReason(PaymentIntentCancelParams
+                            .CancellationReason.REQUESTED_BY_CUSTOMER)
                     .build();
             return paymentIntent.cancel(params);
         }catch (StripeException e){
-            log.error("[Can't make payment: {}]",paymentId);
+            log.error("[Can't make payment: {}, error: {}]",paymentId,
+                    e.getStripeError().getMessage());
             return null;
         }
     }
 
-    @Override
-    public PaymentIntent confirmPayment(String paymentId, String paymentMethod) {
-        try {
-            PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentId);
-            PaymentIntentConfirmParams params = PaymentIntentConfirmParams.builder()
-                    .setReturnUrl("")
-                    .setPaymentMethod(paymentMethod)
-                    .build();
-            return paymentIntent.confirm(params);
-        }catch (StripeException e){
-            log.error("[Can't confirm payment: {}]",paymentId);
-            return null;
-        }
-    }
+
+
+
 
     @Override
-    public String getPaymentStatus(String paymentId) {
+    @Transactional(readOnly = true,rollbackFor = StripeException.class)
+    public PaymentResponse getPaymentStatus(String paymentId) {
         try {
             var paymentIntent = PaymentIntent.retrieve(paymentId);
-            var card = cardRepository.findByPaymentEntity_Id(paymentId);
-            var response = paymentMapper.mapToPaymentEntity(paymentIntent,card);
-            log.info("[Payment intent: {}]",paymentIntent.getStatus());
-            return response.getPaymentStatus().name();
+            var payment = paymentRepository.findById(paymentId)
+                            .orElseThrow();
+            var response = PaymentResponse.builder()
+                            .id(payment.getId())
+                            .status(paymentIntent.getStatus()
+                            .replace("_"," ")
+                            .toUpperCase())
+                            .build();
+            log.info("[Payment status: {}]",paymentIntent.getStatus());
+            return response;
         }catch (StripeException e){
             log.error("[Can't get status of payment: {}, error: {}]",paymentId,e.getMessage());
             return null;
@@ -159,26 +168,37 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     public PaymentIntent buildPayment(UserRequest userRequest,
-                                      BigDecimal amount){
-        try {
-            PaymentIntentCreateParams createParams = PaymentIntentCreateParams
-                    .builder()
-                    .setAmount(Long.valueOf(String.valueOf(amount)))
-                    .setCurrency(USD_CURRENCY)
-                    .setCustomer(userRequest.getUsername())
-                    .setReceiptEmail(userRequest.getEmail())
-                    .build();
-            var payment =  PaymentIntent.create(createParams);
-            var client = buildCustomer(userRequest);
-            payment.setCustomer(client.getId());
-            Map<String,String> metadata = addMetadata(amount,USD_CURRENCY,client.getId());
-            payment.setMetadata(metadata);
-            log.error("[Metadata keys: {}, value: {}]",metadata.keySet(),metadata.values());
-            return payment;
-        }catch (StripeException e){
-            log.error("[Can't build payment, error: {}".toUpperCase(),e.getMessage());
-            throw new RuntimeException();
-        }
+                                      BigDecimal amount,
+                                      String apiId){
+            try {
+                RequestOptions requestOptions = null;
+                if (accountId != null) {
+                    requestOptions = RequestOptions.builder()
+                            .setApiKey(apiKey)
+                            .setStripeAccount(accountId)
+                            .build();
+                }
+                PaymentIntentCreateParams createParams = PaymentIntentCreateParams
+                        .builder()
+                        .setAmount(Long.valueOf(String.valueOf(amount)))
+                        .setCurrency(USD_CURRENCY)
+                        .setCustomer(userRequest.getUsername())
+                        .setReceiptEmail(userRequest.getEmail())
+                        .addPaymentMethodType(PAYMENT_METHOD_TYPE)
+                        .setPaymentMethod(PAYMENT_METHOD)
+                        .build();
+                var payment = PaymentIntent.create(createParams, requestOptions);
+                var client = buildCustomer(userRequest);
+                payment.setCustomer(client.getId());
+                Map<String, String> metadata = addMetadata(amount, USD_CURRENCY, client.getId());
+                payment.setMetadata(metadata);
+                log.error("[Metadata keys: {}, value: {}]", metadata.keySet(), metadata.values());
+                return payment;
+            }catch(StripeException e){
+                log.error("[Can't build payment, error: {}".toUpperCase(), e.getMessage());
+                throw new RuntimeException();
+            }
+
     }
 
     private String mapFromGsonToJackson(PaymentIntent paymentIntent) {
@@ -208,6 +228,7 @@ public class PaymentServiceImpl implements PaymentService {
     public Map<String,String> addMetadata(BigDecimal amount,
                             String currency,
                             String customerId){
+
         Map<String,String> headers = new HashMap<>();
         headers.put("amount",String.valueOf(amount));
         headers.put("currency",currency);

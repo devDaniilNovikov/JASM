@@ -1,3 +1,5 @@
+import org.gradle.internal.impldep.org.bouncycastle.oer.OERDefinition.optional
+
 plugins {
     java
     id("org.springframework.boot") version "3.5.3"
@@ -37,9 +39,12 @@ dependencies {
     implementation("org.springframework.integration:spring-integration-kafka")
     implementation("org.springframework.integration:spring-integration-mail")
     implementation("org.springframework.integration:spring-integration-redis")
+    // https://mvnrepository.com/artifact/org.springframework/spring-context-indexer
+    implementation("org.springframework:spring-context-indexer:7.0.0-M9")
     implementation ("com.stripe:stripe-java:24.0.0")
     // https://mvnrepository.com/artifact/redis.clients/jedis
-    implementation("redis.clients:jedis:6.0.0")
+    // https://mvnrepository.com/artifact/io.lettuce/lettuce-core
+    implementation("io.lettuce:lettuce-core:6.7.1.RELEASE")
     implementation ("io.projectreactor.kafka:reactor-kafka:1.3.21")
     // https://mvnrepository.com/artifact/com.google.guava/guava
     implementation("com.google.guava:guava:33.4.8-jre")

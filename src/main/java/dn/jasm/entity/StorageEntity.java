@@ -9,10 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(schema = "jasm",name = "warehouse")
+@Table(schema = "jasm",name = "storage")
 @Getter
 @Setter
-public class WareHouseEntity extends BasedEntity {
+public class StorageEntity extends BasedEntity {
 
 
     @ManyToOne(fetch = FetchType.LAZY,cascade = CascadeType.ALL)
@@ -21,4 +21,7 @@ public class WareHouseEntity extends BasedEntity {
 
     @OneToMany(mappedBy = "wareHouse")
     private List<ItemEntity> items = new ArrayList<>();
+
+
+    private List<UserEntity> users = new ArrayList<>();
 }

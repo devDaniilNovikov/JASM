@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,7 +24,7 @@ public class UserSchedulerImpl implements UserScheduler {
 
     private final UserRepository userRepository;
     private final UserService userService;
-    private final RedisTemplate<String,Object> redisTemplate;
+    private final RedisTemplate<String,String> redisTemplate;
 
     @Override
     @Transactional
@@ -65,7 +68,7 @@ public class UserSchedulerImpl implements UserScheduler {
     }
 
 
-//    @Scheduled(fixedDelay = 100000L)
+    @Scheduled(cron = "0 0 0 * * *")
     @Override
     public void cleanCache(){
         Set<String> keys = Objects.requireNonNull(redisTemplate.keys("*"));

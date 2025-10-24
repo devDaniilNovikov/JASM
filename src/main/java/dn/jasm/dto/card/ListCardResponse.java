@@ -1,6 +1,5 @@
 package dn.jasm.dto.card;
 
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,7 +7,7 @@ import java.util.*;
 
 @Getter
 @Setter
-public class SetCardResponse {
+public class ListCardResponse {
 
-    public Set<CardResponse> cards = new HashSet<>();
+    public List<CardResponse> cards = new ArrayList<>();
 }

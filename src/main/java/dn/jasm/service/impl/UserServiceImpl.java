@@ -1,17 +1,13 @@
 package dn.jasm.service.impl;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import dn.jasm.configuration.aop.Loggable;
 import dn.jasm.configuration.aop.TimeResulting;
 import dn.jasm.configuration.kafka.KafkaService;
+import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.card.CardResponse;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
 import dn.jasm.entity.*;
-import dn.jasm.event.EventType;
 import dn.jasm.event.PaymentEvent;
 import dn.jasm.event.user.UserCreateEvent;
 import dn.jasm.exception.AlreadyExistException;
@@ -25,17 +21,21 @@ import dn.jasm.entity.enums.UserStatus;
 import dn.jasm.event.user.UserUpdateEvent;
 import dn.jasm.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.Hibernate;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.MessageFormat;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -60,6 +60,8 @@ public class UserServiceImpl implements UserService {
     private final ApplicationEventPublisher eventPublisher;
     private final RedisService redisService;
     private final KafkaService kafkaService;
+    private final RedisTemplate<String,Object> redisTemplate;
+
 
 
     @Override
@@ -84,8 +86,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse findByUsername(String username) {
         if (!redisService.checkKeyExist(username)){
-            return userMapper.mapToDto(userRepository.findByUsername(username).map(
-                    user->{
+            return userMapper.mapToDto(userRepository.findByUsername(username)
+                    .map(user->{
                         redisService.writeObjectInRedis(username,user);
                         return user;
                     }).orElseThrow(()->new UserNotFoundException(
@@ -98,20 +100,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @TimeResulting
+    @SneakyThrows
     public UserResponse findById(Long id) {
-        String cacheKey = String.valueOf(id);
-        if (!redisService.checkKeyExist(cacheKey)) {
-            return userMapper.mapToDto(userRepository.findById(id)
-                    .map(user -> {
-                        Hibernate.initialize(user.getComments());
-                        redisService.writeObjectInRedis(cacheKey, user);
-                        return user;
-                    }).orElseThrow(() -> new UserNotFoundException(
-                            MessageFormat.format("[User with id: {0} not found]", id))));
+        var key = CacheNames.USER_CACHE+String.valueOf(id);
+        if (redisTemplate.hasKey(key)){
+            log.info("[Value was getting from cache!]");
+            return (UserResponse) redisTemplate.opsForValue().get(key);
         }
-        return userMapper.mapToDto(userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(
-                        MessageFormat.format("[User with id: {0} not found]", id))));
+
+        return userMapper.mapToDto(
+                userRepository.findById(id)
+                        .orElseThrow(()->new UserNotFoundException(
+                                MessageFormat.format("[User with id: {0} not found]",id)))
+        );
     }
 
     @Transactional(readOnly = true)
@@ -157,7 +158,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     @TimeResulting
-
     public UserResponse createUser(UserRequest userRequest) {
             UserEntity user = new UserEntity();
             user.setUsername(userRequest.getUsername());
@@ -172,11 +172,12 @@ public class UserServiceImpl implements UserService {
             user.setUpdatedAt(LocalDateTime.now());
             user.setStatus(UserStatus.NEW.name());
             userRepository.save(user);
-            var cacheKey = String.valueOf(user.getId());
-            redisService.writeObjectInRedis(cacheKey, user);
+            var mappedUser = userMapper.mapToDto(user);
+            var cacheKey = String.valueOf(mappedUser.getId());
+            redisService.putToCache(cacheKey,mappedUser,CacheNames.USER_CACHE);
             publishEvent(user);
             updateBalanceOfUser(user.getId(), BigDecimal.valueOf(1000.1));
-            return userMapper.mapToDto(user);
+            return mappedUser;
     }
 
 
@@ -189,9 +190,6 @@ public class UserServiceImpl implements UserService {
                 user.getUsername()
         ));
     }
-
-
-
 
 
     @Override
@@ -210,10 +208,10 @@ public class UserServiceImpl implements UserService {
                             user.getUpdatedAt(),
                             String.valueOf(id)));
                     log.info("Updated user: {}",user.getUsername());
-                },  ()->{
-                    throw new UserNotFoundException(MessageFormat.format("[User with id: {0} not found]",id));
-                }
-                );
+                }, ()->{
+                    throw new UserNotFoundException(
+                            MessageFormat.format("[User with id: {0} not found]",id)
+                    );});
 
     }
 

@@ -23,7 +23,7 @@ spring:
 #    username: ${ELASTIC_USERNAME}
 #    password: ${ELASTIC_PASSWORD}
   jpa:
-    show-sql: false
+    show-sql: true
     hibernate:
       ddl-auto: update
 
@@ -70,18 +70,13 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
-      repositories:
-        enabled: true
-      lettuce:
-        pool:
-          enabled: true
 
   cache:
     type: redis
     redis:
       time-to-live: 5
-      enable-statistics: true
-    cache-names: notification,users,payments,orders,items,comments
+
+
   threads:
     virtual:
       enabled: true
@@ -104,22 +99,21 @@ logging:
 stripe:
   secret:
     api-key: ${STRIPE_API_KEY}
-account:
-  secret:
-    id: ${STRIPE_ACCOUNT_ID}
-springdoc:
-  swagger-ui:
-    path: ${SWAGGER_UI_PATH}
-open-api:
-  contact:
-    name: ${OPEN_API_CONTACT_NAME}
-    email: ${MAIL_USERNAME}
-  info:
-    title: ${OPEN_API_CONTACT_TITLE}
-    version: ${OPEN_API_CONTACT_VERSION}
-    description: ${OPEN_API_CONTACT_DESCRIPTION}
-  server:
-    description: ${OPEN_API_SERVER_DESCRIPTION}
+  account:
+    key: ${STRIPE_ACCOUNT_KEY}
+#springdoc:
+#  swagger-ui:
+#    path: ${SWAGGER_UI_PATH}
+#open-api:
+#  contact:
+#    name: ${OPEN_API_CONTACT_NAME}
+#    email: ${MAIL_USERNAME}
+#  info:
+#    title: ${OPEN_API_CONTACT_TITLE}
+#    version: ${OPEN_API_CONTACT_VERSION}
+#    description: ${OPEN_API_CONTACT_DESCRIPTION}
+#  server:
+#    description: ${OPEN_API_SERVER_DESCRIPTION}
 
 order:
   discount:

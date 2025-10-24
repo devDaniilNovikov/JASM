@@ -10,7 +10,49 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class PaymentEvent extends ApplicationEvent implements BaseEvent  {
+public class
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PaymentEvent extends ApplicationEvent implements BaseEvent  {
 
     private BigDecimal amount;;
     private String email;

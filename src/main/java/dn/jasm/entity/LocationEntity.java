@@ -19,5 +19,5 @@ public class LocationEntity extends BasedEntity {
     private List<DeliveryEntity> deliveries = new ArrayList<>();
 
     @OneToMany(mappedBy = "location")
-    private List<WareHouseEntity> wareHouses = new ArrayList<>();
+    private List<StorageEntity> wareHouses = new ArrayList<>();
 }

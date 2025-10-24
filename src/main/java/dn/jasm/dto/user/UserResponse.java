@@ -56,4 +56,27 @@ public class UserResponse implements Serializable{
     private Map<String, Set<CardResponse>> cards;
     @JsonIgnore
     private List<UserEntity> userList;
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("UserResponse{");
+        sb.append("balance=").append(balance);
+        sb.append(", id=").append(id);
+        sb.append(", username='").append(username).append('\'');
+        sb.append(", password='").append(password).append('\'');
+        sb.append(", phoneNumber='").append(phoneNumber).append('\'');
+        sb.append(", userStatus='").append(userStatus).append('\'');
+        sb.append(", email='").append(email).append('\'');
+        sb.append(", createdAt=").append(createdAt);
+        sb.append(", updatedAt=").append(updatedAt);
+        sb.append(", countOfDeals=").append(countOfDeals);
+        sb.append(", orders=").append(orders);
+        sb.append(", users=").append(users);
+        sb.append(", comments=").append(comments);
+        sb.append(", txMap=").append(txMap);
+        sb.append(", cards=").append(cards);
+        sb.append(", userList=").append(userList);
+        sb.append('}');
+        return sb.toString();
+    }
 }

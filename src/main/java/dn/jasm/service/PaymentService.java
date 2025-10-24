@@ -2,6 +2,7 @@ package dn.jasm.service;
 
 import com.stripe.model.*;
 import dn.jasm.dto.item.ItemRequest;
+import dn.jasm.dto.payment.PaymentResponse;
 import dn.jasm.dto.user.UserRequest;
 
 import java.math.BigDecimal;
@@ -15,9 +16,7 @@ public interface PaymentService {
 
     PaymentIntent cancelPayment(String paymentId);
 
-    PaymentIntent confirmPayment(String paymentId,
-                                 String paymentMethod);
 
-    String getPaymentStatus(String paymentId);
+    PaymentResponse getPaymentStatus(String paymentId);
 
 }

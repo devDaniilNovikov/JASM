@@ -14,7 +14,6 @@ import java.util.Set;
 
 public interface CardRepository extends JpaRepository<CardEntity,Long> {
 
-    @Query(value = "SELECT c FROM CardEntity c JOIN FETCH c.user u WHERE c.cardNumber = :cardNumber")
     Optional<CardEntity> findByCardNumber(String cardNumber);
 
     List<CardEntity> findByUserId(Long userId);
