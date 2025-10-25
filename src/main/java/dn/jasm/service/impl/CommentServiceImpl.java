@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dn.jasm.configuration.aop.Loggable;
 import dn.jasm.configuration.aop.TimeResulting;
-import dn.jasm.configuration.kafka.KafkaService;
 import dn.jasm.dto.comment.CommentRequest;
 import dn.jasm.dto.comment.CommentResponse;
 import dn.jasm.dto.comment.CommentUpdateRequest;
@@ -50,7 +49,6 @@ public class CommentServiceImpl implements CommentService {
     private final RedisService redisService;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
-    private final KafkaService kafkaService;
 
     private final Map<String,ListCommentResponse> userAndComments = new HashMap<>();
 
@@ -236,11 +234,11 @@ public class CommentServiceImpl implements CommentService {
             objectMapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             String message = objectMapper.writeValueAsString(commentEvent);
 
-            CompletableFuture<Void> kafkaFuture = CompletableFuture.runAsync(() ->
-                    kafkaService.sendMessage(message));
+//            CompletableFuture<Void> rabbitFuture = CompletableFuture.runAsync(() ->
+//                    rabbitService.sendMessage(message));
             CompletableFuture<Void> redisFuture = CompletableFuture.runAsync(() ->
                     redisService.writeObjectInRedis(commentEvent.getComment(), message));
-            CompletableFuture.allOf(kafkaFuture, redisFuture)
+            CompletableFuture.allOf(redisFuture)
                     .exceptionally(throwable -> {
                         log.error("[Error processing comment event: {}]", throwable.getMessage());
                         return null;
@@ -257,7 +255,6 @@ public class CommentServiceImpl implements CommentService {
                 String.valueOf(commentUpdatedEvent.getCommentId()),
                 commentUpdatedEvent.getNewComment()
         );
-        kafkaService.sendMessage(String.valueOf(commentUpdatedEvent));
         log.info("[Handle Updating of comment: id: {}, new comment: {}]",
                 commentUpdatedEvent.getCommentId(),
                 commentUpdatedEvent.getNewComment()

@@ -1,7 +1,6 @@
 package dn.jasm.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.aop.TimeResulting;
-import dn.jasm.configuration.kafka.KafkaService;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.card.CardResponse;
 import dn.jasm.dto.user.UserRequest;
@@ -16,6 +15,7 @@ import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.CardMapper;
 import dn.jasm.mapper.UserMapper;
 import dn.jasm.repository.*;
+import dn.jasm.service.RabbitService;
 import dn.jasm.service.RedisService;
 import dn.jasm.entity.enums.UserStatus;
 import dn.jasm.event.user.UserUpdateEvent;
@@ -24,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
@@ -59,8 +61,10 @@ public class UserServiceImpl implements UserService {
     private final CardMapper cardMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final RedisService redisService;
-    private final KafkaService kafkaService;
     private final RedisTemplate<String,Object> redisTemplate;
+    private final RabbitService rabbitService;
+
+
 
 
 
@@ -472,7 +476,6 @@ public class UserServiceImpl implements UserService {
         redisService.writeObjectInRedis(userCreateEvent.getUserId(),
                 userCreateEvent.toString());
         log.info("[Cached event: {}]",userCreateEvent.getUsername());
-        kafkaService.sendMessage(userCreateEvent.toString());
     }
 
     @Override
@@ -568,6 +571,11 @@ public class UserServiceImpl implements UserService {
         }
         userRepository.save(user);
         log.info("[Total Balance of user is: {}]",totalBalance);
+    }
+
+    @EventListener
+    public void handleUserEvent(UserCreateEvent userCreateEvent){
+        rabbitService.sendEvent(userCreateEvent);
     }
 
 }

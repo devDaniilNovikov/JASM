@@ -71,6 +71,9 @@ dependencies {
     implementation("org.springframework.integration:spring-integration-websocket")
     implementation("org.springframework.integration:spring-integration-stomp")
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j")
+    implementation("org.springframework.boot:spring-boot-starter-amqp")
+    implementation("org.springframework.integration:spring-integration-amqp")
+    testImplementation("org.springframework.amqp:spring-rabbit-test")
     // https://mvnrepository.com/artifact/com.speedment.jpastreamer/jpastreamer-core
     runtimeOnly("org.postgresql:postgresql:42.7.7")
     compileOnly ("org.projectlombok:lombok:1.18.32")

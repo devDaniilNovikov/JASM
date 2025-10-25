@@ -74,8 +74,8 @@ public class CardServiceImpl implements CardService {
 
     }
 
-    @Async
-    protected void publishEvent(CardEntity card){
+
+    public void publishEvent(CardEntity card){
         eventPublisher.publishEvent(
                 new CardCreateEvent(this,
                         card.getCardNumber(),

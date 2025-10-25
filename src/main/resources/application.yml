@@ -34,15 +34,14 @@ spring:
         format_sql: true
   aop:
     auto: true
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVER}
-    listener:
-      ack-mode: batch
-    consumer:
-      client-id: ${KAFKA_CLIENT_ID}
-      auto-offset-reset: earliest
-    template:
-      default-topic: ${KAFKA_TOPIC_NAME}
+  rabbitmq:
+      host: ${RABBIT_MQ_HOST}
+      port: ${RABBIT_MQ_PORT}
+      listener:
+        direct:
+          acknowledge-mode: manual
+      password: ${RABBIT_MQ_PASSWORD}
+      username: ${RABBIT_MQ_USERNAME}
 
 
 
@@ -120,5 +119,10 @@ order:
     value: 10
   limit:
     value: 5
+rabbitMq:
+  queueName: ${RABBIT_MQ_QUEUE_NAME}
+  topicExchangeName: ${RABBIT_MQ_TOPIC_NAME}
+  routingKey: ${RABBIT_MQ_ROUTING_KEY}
+  directExchange: ${RABBIT_MQ_DIRECT_EXCHANGE}
 
 
