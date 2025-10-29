@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.primitives.Bytes;
 import com.google.gson.JsonObject;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
@@ -118,7 +117,7 @@ public class PaymentServiceImpl implements PaymentService {
             PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentId);
             PaymentIntentCancelParams params = PaymentIntentCancelParams.builder()
                     .setCancellationReason(PaymentIntentCancelParams
-                            .CancellationReason.REQUESTED_BY_CUSTOMER)
+                    .CancellationReason.REQUESTED_BY_CUSTOMER)
                     .build();
             return paymentIntent.cancel(params);
         }catch (StripeException e){

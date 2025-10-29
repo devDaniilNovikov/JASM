@@ -45,10 +45,6 @@ dependencies {
     // https://mvnrepository.com/artifact/redis.clients/jedis
     // https://mvnrepository.com/artifact/io.lettuce/lettuce-core
     implementation("io.lettuce:lettuce-core:6.7.1.RELEASE")
-    implementation ("io.projectreactor.kafka:reactor-kafka:1.3.21")
-    // https://mvnrepository.com/artifact/com.google.guava/guava
-    implementation("com.google.guava:guava:33.4.8-jre")
-    implementation("com.ea.async:ea-async:1.2.3")
     implementation ("org.apache.pdfbox:pdfbox:2.0.30")
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
     implementation("com.google.code.gson:gson:2.13.2")
@@ -78,8 +74,6 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql:42.7.7")
     compileOnly ("org.projectlombok:lombok:1.18.32")
     annotationProcessor ("org.projectlombok:lombok:1.18.32")
-    annotationProcessor ("org.projectlombok:lombok-mapstruct-binding:0.2.0")
-    annotationProcessor ("org.mapstruct:mapstruct-processor:1.5.5.Final")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.batch:spring-batch-test")
     testImplementation("org.springframework.integration:spring-integration-test")

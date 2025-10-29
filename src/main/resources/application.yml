@@ -69,6 +69,7 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
+      script: ${REDIS_SCRIPT}
 
   cache:
     type: redis
@@ -85,8 +86,17 @@ spring:
         size: 4
       shutdown:
         await-termination: true
+    execution:
+      shutdown:
+        await-termination: true
   jackson:
     date-format: java.text.SimpleDateFormat
+  mvc:
+    async:
+      request-timeout: 5
+  servlet:
+    multipart:
+      enabled: true
 
 logging:
   level:
@@ -124,5 +134,7 @@ rabbitMq:
   topicExchangeName: ${RABBIT_MQ_TOPIC_NAME}
   routingKey: ${RABBIT_MQ_ROUTING_KEY}
   directExchange: ${RABBIT_MQ_DIRECT_EXCHANGE}
+  ttl: ${RABBIT_TTL}
+  headerName: ${RABBIT_HEADER_NAME}
 
 

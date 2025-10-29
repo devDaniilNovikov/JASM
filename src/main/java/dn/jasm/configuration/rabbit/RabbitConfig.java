@@ -1,11 +1,10 @@
 package dn.jasm.configuration.rabbit;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.TopicExchange;
+import jakarta.annotation.PostConstruct;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.transaction.RabbitTransactionManager;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +12,7 @@ import org.springframework.boot.autoconfigure.amqp.RabbitProperties;
 import org.springframework.boot.autoconfigure.amqp.RabbitTemplateConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.retry.backoff.BackOffPolicyBuilder;
 import org.springframework.retry.policy.SimpleRetryPolicy;
@@ -48,6 +48,15 @@ public class RabbitConfig {
     @Value("${rabbitMq.routingKey}")
     private String routingKey;
 
+    @Value("${rabbitMq.directExchange}")
+    private String directExchange;
+
+    @Value("${rabbitMq.ttl}")
+    private int ttl;
+
+    @Value("${rabbitMq.headerName}")
+    private String headerName;
+
     @Bean
     public ExecutorService executorService() {
         return Executors.newFixedThreadPool(3,threadFactory());
@@ -58,6 +67,7 @@ public class RabbitConfig {
         ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
         taskExecutor.setCorePoolSize(5);
         taskExecutor.setQueueCapacity(25);
+        taskExecutor.setMaxPoolSize(10);
         taskExecutor.setThreadNamePrefix("JasmAsyncJobs-");
         taskExecutor.setVirtualThreads(true);
         taskExecutor.initialize();
@@ -78,16 +88,27 @@ public class RabbitConfig {
     }
 
     @Bean
+    public DirectExchange directExchange(){
+        return new DirectExchange(directExchange,true,false);
+    }
+
+    @Bean
     public RabbitTemplateConfigurer rabbitTemplateConfigurer(ConnectionFactory connectionFactory){
+        RabbitTemplateConfigurer rabbitTemplateConfigurer = new RabbitTemplateConfigurer(rabbitProperties());
+        rabbitTemplateConfigurer.setMessageConverter(messageConverter());
+        rabbitTemplateConfigurer.configure(rabbitTemplate(connectionFactory),connectionFactory);
+        return rabbitTemplateConfigurer;
+    }
+
+    @Bean
+    @Primary
+    public RabbitProperties rabbitProperties(){
         RabbitProperties rabbitProperties = new RabbitProperties();
         rabbitProperties.setHost(host);
         rabbitProperties.setPort(port);
         rabbitProperties.setUsername(username);
         rabbitProperties.setPassword(password);
-        RabbitTemplateConfigurer rabbitTemplateConfigurer = new RabbitTemplateConfigurer(rabbitProperties);
-        rabbitTemplateConfigurer.setMessageConverter(messageConverter());
-        rabbitTemplateConfigurer.configure(rabbitTemplate(connectionFactory),connectionFactory);
-        return rabbitTemplateConfigurer;
+        return rabbitProperties;
     }
 
     @Bean
@@ -95,9 +116,32 @@ public class RabbitConfig {
         return new Jackson2JsonMessageConverter();
     }
 
+
+
     @Bean
     public Queue queue(){
-        return new Queue(queueName,true);
+        return QueueBuilder.durable()
+                .stream()
+                .singleActiveConsumer()
+                .exclusive()
+                .withArgument("queue-name",queueName)
+                .ttl(ttl)
+                .autoDelete()
+                .overflow(QueueBuilder.Overflow.rejectPublish)
+                .deliveryLimit(5)
+                .expires(10)
+                .build();
+    }
+
+    @Bean
+    @Primary
+    public HeadersExchange headersExchange(){
+        HeadersExchange headersExchange = new HeadersExchange(headerName);
+        headersExchange.setDelayed(false);
+        headersExchange.setInternal(true);
+        headersExchange.setShouldDeclare(true);
+        headersExchange.addArgument("topic-name",topicExchangeName);
+        return headersExchange;
     }
 
     @Bean

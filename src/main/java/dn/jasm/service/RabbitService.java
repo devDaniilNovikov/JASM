@@ -4,5 +4,7 @@ import dn.jasm.event.user.UserCreateEvent;
 
 public interface RabbitService {
 
-    void sendEvent(UserCreateEvent userCreateEvent);
+    void sendEvent(String queueName,UserCreateEvent userCreateEvent);
+
+    void completeAsync(UserCreateEvent event);
 }

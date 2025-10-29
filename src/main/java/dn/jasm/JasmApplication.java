@@ -20,7 +20,6 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 @EnableAsync
 @EnableScheduling
 @SpringBootApplication
-@EnableTransactionManagement
 @EnableAspectJAutoProxy
 @EnableRetry
 @EnableRabbit

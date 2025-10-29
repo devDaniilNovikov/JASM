@@ -2,6 +2,7 @@ package dn.jasm.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.aop.TimeResulting;
 import dn.jasm.configuration.redis.CacheNames;
+import dn.jasm.configuration.redis.RedisLockManager;
 import dn.jasm.dto.card.CardResponse;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
@@ -63,6 +64,7 @@ public class UserServiceImpl implements UserService {
     private final RedisService redisService;
     private final RedisTemplate<String,Object> redisTemplate;
     private final RabbitService rabbitService;
+    private final RedisLockManager redisLockManager;
 
 
 
@@ -178,10 +180,34 @@ public class UserServiceImpl implements UserService {
             userRepository.save(user);
             var mappedUser = userMapper.mapToDto(user);
             var cacheKey = String.valueOf(mappedUser.getId());
-            redisService.putToCache(cacheKey,mappedUser,CacheNames.USER_CACHE);
+            putAndLock(
+                    cacheKey,
+                    mappedUser,
+                    CacheNames.USER_CACHE,
+                    Duration.ofMinutes(1)
+            );
             publishEvent(user);
             updateBalanceOfUser(user.getId(), BigDecimal.valueOf(1000.1));
             return mappedUser;
+    }
+
+    private void putAndLock(String cacheKey,
+                            UserResponse userResponse,
+                            CacheNames cacheNames,
+                            Duration ttl){
+        ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
+        CompletableFuture.runAsync(()->redisService.putToCache(cacheKey, userResponse,cacheNames),
+                        executorService)
+                .thenRunAsync(()->redisLockManager.lock(cacheKey,ttl),
+                        executorService)
+                .whenComplete((r,e)->{
+                    if (e!=null){
+                        log.error("Error: {}",e.getMessage());
+                    }
+                    else {
+                        log.info("[Async is done!]");
+                    }
+                });
     }
 
 
@@ -575,7 +601,8 @@ public class UserServiceImpl implements UserService {
 
     @EventListener
     public void handleUserEvent(UserCreateEvent userCreateEvent){
-        rabbitService.sendEvent(userCreateEvent);
+        log.info("Handle event: {}",userCreateEvent);
+        rabbitService.completeAsync(userCreateEvent);
     }
 
 }

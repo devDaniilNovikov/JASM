@@ -2,10 +2,13 @@ package dn.jasm.service.scheduling.impl;
 import dn.jasm.entity.UserEntity;
 import dn.jasm.repository.UserRepository;
 import dn.jasm.entity.enums.UserStatus;
+import dn.jasm.service.RabbitService;
 import dn.jasm.service.UserService;
 import dn.jasm.service.scheduling.UserScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,7 @@ public class UserSchedulerImpl implements UserScheduler {
     private final UserRepository userRepository;
     private final UserService userService;
     private final RedisTemplate<String,String> redisTemplate;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     @Transactional
