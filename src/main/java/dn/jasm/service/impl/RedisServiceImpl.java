@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,7 +76,7 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW,timeout = 1)
+    @Transactional(propagation = Propagation.REQUIRES_NEW,timeout = 1,isolation = Isolation.REPEATABLE_READ)
     public void putToCache(String key,
                            Object value,
                            CacheNames cacheNames) {

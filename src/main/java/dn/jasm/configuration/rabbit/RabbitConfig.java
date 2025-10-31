@@ -1,10 +1,16 @@
 package dn.jasm.configuration.rabbit;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
+import lombok.SneakyThrows;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.RabbitConverterFuture;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.transaction.RabbitTransactionManager;
+import org.springframework.amqp.support.converter.DefaultJackson2JavaTypeMapper;
+import org.springframework.amqp.support.converter.Jackson2JavaTypeMapper;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,10 +25,9 @@ import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.security.SecureRandom;
+import java.util.concurrent.*;
+import java.util.Map;
 
 @Configuration
 public class RabbitConfig {
@@ -57,18 +62,28 @@ public class RabbitConfig {
     @Value("${rabbitMq.headerName}")
     private String headerName;
 
+    @Value("${spring.task.execution.thread-name-prefix}")
+    private String threadPrefix;
+
+    @Bean
+    public SecureRandom secureRandom(){
+        SecureRandom secureRandom = new SecureRandom();
+        secureRandom.setSeed(secureRandom.nextLong(100000));
+        return secureRandom;
+    }
+
     @Bean
     public ExecutorService executorService() {
         return Executors.newFixedThreadPool(3,threadFactory());
     }
 
-    @Bean("taskExecutor")
+    @Bean()
     public ThreadFactory threadFactory(){
         ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
         taskExecutor.setCorePoolSize(5);
         taskExecutor.setQueueCapacity(25);
         taskExecutor.setMaxPoolSize(10);
-        taskExecutor.setThreadNamePrefix("JasmAsyncJobs-");
+        taskExecutor.setThreadNamePrefix(threadPrefix);
         taskExecutor.setVirtualThreads(true);
         taskExecutor.initialize();
         return taskExecutor;
@@ -83,6 +98,23 @@ public class RabbitConfig {
         rabbitTemplate.setExchange(topicExchangeName);
         rabbitTemplate.setRetryTemplate(retryTemplate());
         rabbitTemplate.setTaskExecutor(executorService());
+        rabbitTemplate.setBeforePublishPostProcessors(
+                message -> {
+                    if (message!=null && message.getMessageProperties()!=null){
+                        message.getMessageProperties()
+                                .getHeaders()
+                                .remove("__TypeId__");
+                        message.getMessageProperties()
+                                .setHeaders(
+                                        Map.of(
+                                        "routingKey",routingKey,
+                                        "topicExchangeName",topicExchangeName
+                                        )
+                                );
+                    }
+                    return message;
+                }
+        );
         rabbitTemplate.afterPropertiesSet();
         return rabbitTemplate;
     }
@@ -113,9 +145,15 @@ public class RabbitConfig {
 
     @Bean
     public MessageConverter messageConverter(){
-        return new Jackson2JsonMessageConverter();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        Jackson2JsonMessageConverter jackson2JsonMessageConverter = new Jackson2JsonMessageConverter(objectMapper);
+        DefaultJackson2JavaTypeMapper typeMapper = new DefaultJackson2JavaTypeMapper();
+        typeMapper.setTrustedPackages("*");
+        typeMapper.setTypePrecedence(Jackson2JavaTypeMapper.TypePrecedence.INFERRED);
+        jackson2JsonMessageConverter.setJavaTypeMapper(typeMapper);
+        return jackson2JsonMessageConverter;
     }
-
 
 
     @Bean
@@ -143,6 +181,7 @@ public class RabbitConfig {
         headersExchange.addArgument("topic-name",topicExchangeName);
         return headersExchange;
     }
+
 
     @Bean
     public TopicExchange topicExchange(){

@@ -11,7 +11,8 @@ public enum CacheNames {
     COMMENT_CACHE("comment #"),
     ITEM_CACHE("item #");
 
-    private CacheNames(String value) {
+
+     CacheNames(String value) {
         this.value = value;
     }
 

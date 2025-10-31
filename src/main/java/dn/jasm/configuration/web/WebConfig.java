@@ -2,6 +2,7 @@ package dn.jasm.configuration.web;
 
 
 import dn.jasm.controller.CardController;
+import jakarta.servlet.annotation.WebListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -28,7 +29,8 @@ public class WebConfig {
 
     @EventListener
     public void handleServletEvent(ServletRequestHandledEvent event){
-        if (event.getRequestUrl().equals(URL_FOR_HANDLE) && event.getStatusCode() == 200){
+        if (event.getRequestUrl()
+                .equals(URL_FOR_HANDLE) && event.getStatusCode() == 200){
             log.info("[Handle servlet event: {}, time: {}, ip: {}]",
                     event.getMethod(),
                     event.getProcessingTimeMillis(),

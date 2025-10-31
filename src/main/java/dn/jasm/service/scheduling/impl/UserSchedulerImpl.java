@@ -41,7 +41,9 @@ public class UserSchedulerImpl implements UserScheduler {
         userRepository.deleteAllByIdInBatch(userIds);
         var users = userRepository.findAllById(userIds)
                 .stream()
-                .collect(Collectors.toMap(UserEntity::getUsername, UserEntity::getStatus));
+                .collect(Collectors.toMap(UserEntity::getUsername,
+                        UserEntity::getStatus));
+        rabbitTemplate.destroy();
         log.info("Banned users is delete : {}",users);
     }
 

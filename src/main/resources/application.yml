@@ -89,6 +89,8 @@ spring:
     execution:
       shutdown:
         await-termination: true
+      thread-name-prefix: jassm-jobs
+
   jackson:
     date-format: java.text.SimpleDateFormat
   mvc:
