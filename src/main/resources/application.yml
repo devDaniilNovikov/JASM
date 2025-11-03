@@ -1,5 +1,4 @@
 server:
-  port: ${SERVER_PORT}
   http2:
     enabled: true
   compression:
@@ -8,20 +7,29 @@ server:
     include-binding-errors: always
     include-message: on_param
     include-path: always
+    path: /error
+    whitelabel:
+      enabled: true
   tomcat:
     resource:
       allow-caching: true
+  port: 3000
+  servlet:
+    encoding:
+      charset: UTF-8
 
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    username: ${POSTGRES_USERNAME}
-    password: ${POSTGRES_PASSWORD}
-    url: ${POSTGRES_URL}
+    username: daniilnovikov
+    password: demo2228
+    url: jdbc:postgresql://localhost:5432/postgres
 #  elasticsearch:
 #    uris: ${ELASTIC_URI}
 #    username: ${ELASTIC_USERNAME}
 #    password: ${ELASTIC_PASSWORD}
+  config:
+    import: optional:file:.env[.properties]
   jpa:
     show-sql: true
     hibernate:
@@ -35,47 +43,55 @@ spring:
   aop:
     auto: true
   rabbitmq:
-      host: ${RABBIT_MQ_HOST}
-      port: ${RABBIT_MQ_PORT}
+      host: localhost
+      port: 5672
       listener:
         direct:
           acknowledge-mode: manual
-      password: ${RABBIT_MQ_PASSWORD}
-      username: ${RABBIT_MQ_USERNAME}
+      password: guest
+      username: guest
 
 
 
-  mail:
-   host: ${MAIL_HOST}
-   port: ${MAIL_PORT}
-   username: ${MAIL_USERNAME}
-   password: ${MAIL_PASSWORD}
-   properties:
-     mail:
-       smtp:
-         auth: true
-         starttls:
-           enable: true
-       transport:
-         protocol: smtp
+#  mail:
+#   host: ${MAIL_HOST}
+#   port: ${MAIL_PORT}
+#   username: ${MAIL_USERNAME}
+#   password: ${MAIL_PASSWORD}
+#   properties:
+#     mail:
+#       smtp:
+#         auth: true
+#         starttls:
+#           enable: true
+#       transport:
+#         protocol: smtp
 
   batch:
     job:
       enabled: true
 
-  config:
-    import: optional:file:.env[.properties]
+
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      script: ${REDIS_SCRIPT}
+      host: localhost
+      port: 6379
+      script:
+
 
   cache:
     type: redis
     redis:
       time-to-live: 5
+      cache-null-values: false
+      use-key-prefix: true
+      enable-statistics: true
 
+  validation:
+    method:
+      adapt-constraint-violations: true
+  main:
+    lazy-initialization: true
 
   threads:
     virtual:
@@ -109,22 +125,22 @@ logging:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 stripe:
   secret:
-    api-key: ${STRIPE_API_KEY}
+    api-key: asdfr90q23wera0-d-ase0dr-23q4ew9
   account:
-    key: ${STRIPE_ACCOUNT_KEY}
-#springdoc:
-#  swagger-ui:
-#    path: ${SWAGGER_UI_PATH}
-#open-api:
-#  contact:
-#    name: ${OPEN_API_CONTACT_NAME}
-#    email: ${MAIL_USERNAME}
-#  info:
-#    title: ${OPEN_API_CONTACT_TITLE}
-#    version: ${OPEN_API_CONTACT_VERSION}
-#    description: ${OPEN_API_CONTACT_DESCRIPTION}
-#  server:
-#    description: ${OPEN_API_SERVER_DESCRIPTION}
+    key: asdfr90q23wera0-d-ase0dr-23q4ew900
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+open-api:
+  contact:
+    name: dnNvk
+    email: ololorash2001@mail.ru
+  info:
+    title: Jassm
+    version: 1
+    description: DarkNet-Marketplace
+  server:
+    description: Welcome to the club, Boddy
 
 order:
   discount:
@@ -132,11 +148,16 @@ order:
   limit:
     value: 5
 rabbitMq:
-  queueName: ${RABBIT_MQ_QUEUE_NAME}
-  topicExchangeName: ${RABBIT_MQ_TOPIC_NAME}
-  routingKey: ${RABBIT_MQ_ROUTING_KEY}
-  directExchange: ${RABBIT_MQ_DIRECT_EXCHANGE}
-  ttl: ${RABBIT_TTL}
-  headerName: ${RABBIT_HEADER_NAME}
+  queueName: Jassm
+  topicExchangeName: Jassm-Topic-Exchange
+  routingKey: 4389wr8430-w49320
+  directExchange: Jassm-Direct-Exchange
+  ttl: 60
+  headerName: rabbit-header
+s3:
+  region: RU
+  accessKey: 1320920-423-0qw4
+  secretKey: -304-3204230430953095
+
 
 

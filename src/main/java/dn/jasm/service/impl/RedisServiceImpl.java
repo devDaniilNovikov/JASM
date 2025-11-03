@@ -76,7 +76,9 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW,timeout = 1,isolation = Isolation.REPEATABLE_READ)
+    @Transactional(propagation = Propagation.REQUIRES_NEW,
+            timeout = 1,
+            isolation = Isolation.REPEATABLE_READ)
     public void putToCache(String key,
                            Object value,
                            CacheNames cacheNames) {
@@ -142,7 +144,7 @@ public class RedisServiceImpl implements RedisService {
 
     private void writeInRedis(String redisKey,
                               Object value){
-        if (redisTemplate.hasKey(redisKey)){
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(redisKey))){
             throw new RedisKeyException(
                     MessageFormat.format(
                             "[Value: {0} with key: {1} already have been in cache]",value,redisKey)
@@ -157,7 +159,7 @@ public class RedisServiceImpl implements RedisService {
     }
 
     public boolean existsAt(String key){
-        return redisTemplate.hasKey(key);
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
 

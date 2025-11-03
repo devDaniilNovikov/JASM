@@ -9,7 +9,7 @@ import org.aspectj.lang.annotation.Before;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.stereotype.Component;
 
-@Aspect()
+@Aspect
 @Component
 @Slf4j
 public class LoggingAspect {

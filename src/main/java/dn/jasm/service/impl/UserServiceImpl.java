@@ -1,5 +1,4 @@
 package dn.jasm.service.impl;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.aop.TimeResulting;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.configuration.redis.RedisLockManager;
@@ -16,6 +15,7 @@ import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.CardMapper;
 import dn.jasm.mapper.UserMapper;
 import dn.jasm.repository.*;
+import dn.jasm.service.CommentService;
 import dn.jasm.service.RabbitService;
 import dn.jasm.service.RedisService;
 import dn.jasm.entity.enums.UserStatus;
@@ -25,13 +25,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -227,7 +224,7 @@ public class UserServiceImpl implements UserService {
     public void updateUser(Long id, UserRequest userRequest) {
        userRepository.findById(id)
                .ifPresentOrElse(user->{
-                    isSucessfullValid(userRequest,user);
+                    isSuccessfulValid(userRequest,user);
                     user.setUpdatedAt(LocalDateTime.now());
                     userRepository.save(user);
                     redisService.writeObjectInRedis(user.getId().toString(),user);
@@ -246,7 +243,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Async
-    public void isSucessfullValid(UserRequest userRequest,UserEntity user){
+    public void isSuccessfulValid(UserRequest userRequest, UserEntity user){
         if (userRequest.getUsername() != null && !userRequest.getUsername().isEmpty()) {
             user.setUsername(userRequest.getUsername());
             log.info("[Updated username: {}]",userRequest.getUsername());
@@ -434,8 +431,16 @@ public class UserServiceImpl implements UserService {
                          .flatMap(Collection::stream)
                          .map(TransactionEntity::getId)
                          .toList();
-        userRepository.deleteAllByIdInBatch(ids);
-        transactionRepository.deleteAllByIdInBatch(userTransactionIds);
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        CompletableFuture.runAsync(()->
+                userRepository.deleteAllByIdInBatch(ids),
+                executorService).thenRunAsync(()->transactionRepository.deleteAllByIdInBatch(userTransactionIds),
+                        executorService)
+                        .whenCompleteAsync((r,e)->{
+                            if (e!=null){
+                                log.error("Throwable is: {}",e.getLocalizedMessage());
+                            }
+                        });
         log.info("[Deleted users: {}]",users);
 
     }

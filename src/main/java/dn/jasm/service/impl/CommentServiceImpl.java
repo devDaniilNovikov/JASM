@@ -233,9 +233,6 @@ public class CommentServiceImpl implements CommentService {
             objectMapper.registerModule(new JavaTimeModule());
             objectMapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             String message = objectMapper.writeValueAsString(commentEvent);
-
-//            CompletableFuture<Void> rabbitFuture = CompletableFuture.runAsync(() ->
-//                    rabbitService.sendMessage(message));
             CompletableFuture<Void> redisFuture = CompletableFuture.runAsync(() ->
                     redisService.writeObjectInRedis(commentEvent.getComment(), message));
             CompletableFuture.allOf(redisFuture)

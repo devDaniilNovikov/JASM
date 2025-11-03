@@ -34,11 +34,21 @@ public class ItemEntity extends BasedEntity {
 
     private Double rating;
 
-    @ManyToOne(fetch = FetchType.LAZY,cascade = {CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH})
+    @ManyToOne(fetch = FetchType.LAZY,cascade = {
+            CascadeType.MERGE,
+            CascadeType.DETACH,
+            CascadeType.PERSIST,
+            CascadeType.REFRESH}
+    )
     @JoinColumn(name = "category_id")
     private CategoryEntity category;
 
-    @ManyToOne(fetch = FetchType.LAZY,cascade = {CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH})
+    @ManyToOne(fetch = FetchType.LAZY,cascade = {
+            CascadeType.MERGE,
+            CascadeType.DETACH,
+            CascadeType.PERSIST,
+            CascadeType.REFRESH}
+    )
     @JoinColumn(name = "warehouse_id")
     private StorageEntity wareHouse;
 

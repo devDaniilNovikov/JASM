@@ -221,7 +221,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional
     @Override
-    public void processOrder(OrderRequest orderRequest,List<Long> itemsIds) {
+    public void processOrder(OrderRequest orderRequest,
+                              List<Long> itemsIds) {
         if (itemsIds == null || itemsIds.isEmpty()){
             throw new IllegalArgumentException("[Ids can't be null or empty!]");
         }

@@ -23,4 +23,5 @@ public interface CardRepository extends JpaRepository<CardEntity,Long> {
 
 
     CardEntity findByPaymentEntity_Id(String paymentEntityId);
+
 }

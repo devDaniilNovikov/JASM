@@ -36,6 +36,7 @@ public abstract class BasedEntity implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDateTime updatedAt;
 
-    public BasedEntity(LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public BasedEntity(LocalDateTime createdAt,
+                       LocalDateTime updatedAt) {
     }
 }

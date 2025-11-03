@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
 import lombok.SneakyThrows;
+import org.hibernate.annotations.Array;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.RabbitConverterFuture;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -28,6 +29,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.security.SecureRandom;
 import java.util.concurrent.*;
 import java.util.Map;
+
 
 @Configuration
 public class RabbitConfig {
@@ -105,12 +107,9 @@ public class RabbitConfig {
                                 .getHeaders()
                                 .remove("__TypeId__");
                         message.getMessageProperties()
-                                .setHeaders(
-                                        Map.of(
+                                .setHeaders(Map.of(
                                         "routingKey",routingKey,
-                                        "topicExchangeName",topicExchangeName
-                                        )
-                                );
+                                        "topicExchangeName",topicExchangeName));
                     }
                     return message;
                 }

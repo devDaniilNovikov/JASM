@@ -39,28 +39,21 @@ dependencies {
     implementation("org.springframework.integration:spring-integration-kafka")
     implementation("org.springframework.integration:spring-integration-mail")
     implementation("org.springframework.integration:spring-integration-redis")
-    // https://mvnrepository.com/artifact/org.springframework/spring-context-indexer
     implementation("org.springframework:spring-context-indexer:7.0.0-M9")
     implementation ("com.stripe:stripe-java:24.0.0")
-    // https://mvnrepository.com/artifact/redis.clients/jedis
-    // https://mvnrepository.com/artifact/io.lettuce/lettuce-core
     implementation("io.lettuce:lettuce-core:6.7.1.RELEASE")
     implementation ("org.apache.pdfbox:pdfbox:2.0.30")
-    // https://mvnrepository.com/artifact/com.google.code.gson/gson
     implementation("com.google.code.gson:gson:2.13.2")
-
-    // https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-ui
-
+    implementation("software.amazon.awssdk:s3:2.20.0")
+    implementation("software.amazon.awssdk:auth:2.20.0")
+    implementation("org.springframework.boot:spring-boot-starter-web")
     implementation ("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")
-    // https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
     implementation("org.apache.commons:commons-lang3:3.18.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("io.swagger.core.v3:swagger-annotations:2.2.28")
-
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
     implementation("org.springframework.kafka:spring-kafka")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    // https://mvnrepository.com/artifact/org.postgresql/postgresql
     implementation("org.postgresql:postgresql:42.7.7")
     implementation ("redis.clients:jedis:5.1.0")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
@@ -70,7 +63,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-amqp")
     implementation("org.springframework.integration:spring-integration-amqp")
     testImplementation("org.springframework.amqp:spring-rabbit-test")
-    // https://mvnrepository.com/artifact/com.speedment.jpastreamer/jpastreamer-core
     runtimeOnly("org.postgresql:postgresql:42.7.7")
     compileOnly ("org.projectlombok:lombok:1.18.32")
     annotationProcessor ("org.projectlombok:lombok:1.18.32")
