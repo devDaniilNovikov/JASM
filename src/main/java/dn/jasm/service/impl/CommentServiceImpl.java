@@ -56,11 +56,12 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     @Loggable
-    public void addComment(CommentRequest commentRequest, Long userId) {
+    public void addComment(CommentRequest commentRequest) {
         CommentEntity comment = new CommentEntity();
         comment.setComment(commentRequest.getComment());
         comment.setRating(commentRequest.getRating());
         comment.setCreatedAt(LocalDateTime.now());
+        var userId = comment.getUser().getId();
         var user = userRepository.findById(userId)
                         .orElseThrow(()->new UserNotFoundException(
                                 MessageFormat.format("[User with id: {0} not found]",userId)));

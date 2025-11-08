@@ -17,7 +17,7 @@ public class ItemEntity extends BasedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
-    @JsonBackReference
+    @JsonBackReference("order-items")
     private OrderEntity order;
 
     @Column(nullable = false,unique = true)
@@ -41,6 +41,7 @@ public class ItemEntity extends BasedEntity {
             CascadeType.REFRESH}
     )
     @JoinColumn(name = "category_id")
+    @JsonBackReference("items-categories")
     private CategoryEntity category;
 
     @ManyToOne(fetch = FetchType.LAZY,cascade = {

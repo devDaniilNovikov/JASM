@@ -1,4 +1,6 @@
 package dn.jasm.service.impl;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dn.jasm.configuration.aop.TimeResulting;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.configuration.redis.RedisLockManager;
@@ -15,11 +17,11 @@ import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.CardMapper;
 import dn.jasm.mapper.UserMapper;
 import dn.jasm.repository.*;
-import dn.jasm.service.CommentService;
 import dn.jasm.service.RabbitService;
 import dn.jasm.service.RedisService;
 import dn.jasm.entity.enums.UserStatus;
 import dn.jasm.event.user.UserUpdateEvent;
+import dn.jasm.service.cache.UserCacheService;
 import dn.jasm.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -62,6 +64,9 @@ public class UserServiceImpl implements UserService {
     private final RedisTemplate<String,Object> redisTemplate;
     private final RabbitService rabbitService;
     private final RedisLockManager redisLockManager;
+    private final ThreadFactory threadFactory;
+    private final UserCacheService userCacheService;
+    private final ObjectMapper objectsMapper;
 
 
 
@@ -69,17 +74,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse findByPhoneNumber(String phoneNumber) {
-        if(!redisService.checkKeyExist(phoneNumber)){
-             return userMapper.mapToDto(userRepository.findByPhoneNumber(phoneNumber)
-                             .stream()
-                             .peek(user-> redisService.writeObjectInRedis(phoneNumber,user))
-                             .findAny()
-                             .orElseThrow(()->new UserNotFoundException(
-                                     MessageFormat.format("[User with phoneNumber: {0} not found]",phoneNumber))));
-         }
-         return userMapper.mapToDto(userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(()->new UserNotFoundException(
-                        MessageFormat.format("[User with phoneNumber: {0} not found]",phoneNumber))));
+        String key = CacheNames.USER_CACHE.name()+phoneNumber;
+        Object value = redisTemplate.opsForValue().get(key);
+        if (value!=null){
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+            return objectMapper.convertValue(value, UserResponse.class);
+        }
+        var user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(UserNotFoundException::new);
+        return userMapper.mapToDto(user);
 
     }
 
@@ -88,34 +92,38 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse findByUsername(String username) {
-        if (!redisService.checkKeyExist(username)){
-            return userMapper.mapToDto(userRepository.findByUsername(username)
-                    .map(user->{
-                        redisService.writeObjectInRedis(username,user);
-                        return user;
-                    }).orElseThrow(()->new UserNotFoundException(
-                    MessageFormat.format("[User with username: {0} not found]",username))));
+        String key = CacheNames.USER_CACHE.name()+username;
+        Object value = redisTemplate.opsForValue().get(key);
+        if (value!=null){
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+            log.info("[Value was get from cache!]");
+            return objectMapper.convertValue(value, UserResponse.class);
         }
-        return userMapper.mapToDto(userRepository.findByUsername(username)
-                .orElseThrow(()->new UserNotFoundException(
-                        MessageFormat.format("[User with username: {0} not found]",username))));
+        UserEntity userEntity = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException(
+                        MessageFormat.format("[User with username: {0} not found]", username)));
+        var response = userMapper.mapToDto(userEntity);
+        redisTemplate.opsForValue().set(key,response,Duration.ofMinutes(15));
+        return response;
     }
 
     @Override
     @TimeResulting
     @SneakyThrows
     public UserResponse findById(Long id) {
-        var key = CacheNames.USER_CACHE+String.valueOf(id);
-        if (redisTemplate.hasKey(key)){
-            log.info("[Value was getting from cache!]");
-            return (UserResponse) redisTemplate.opsForValue().get(key);
+        var cache = userCacheService.getValueFromCache(String.valueOf(id));
+        if (cache!=null){
+            log.info("Cache was get from redis");
+            return cache;
         }
-
-        return userMapper.mapToDto(
-                userRepository.findById(id)
-                        .orElseThrow(()->new UserNotFoundException(
-                                MessageFormat.format("[User with id: {0} not found]",id)))
-        );
+        UserEntity userEntity =  userRepository.findById(id)
+                .orElseThrow(()->new UserNotFoundException(
+                        MessageFormat.format("[User with id: {0} not found]",id)));
+        var userDto = userMapper.mapToDto(userEntity);
+        userCacheService.putToCache(String.valueOf(id),userDto);
+        log.info("[Value was getting from db]");
+        return userDto;
     }
 
     @Transactional(readOnly = true)
@@ -128,35 +136,47 @@ public class UserServiceImpl implements UserService {
                 .map(UserEntity::getId)
                 .map(String::valueOf)
                 .collect(Collectors.toSet());
-        if (redisService.checkKeysExist(keys)){
-            var userValues = new HashSet<>(users);
-            redisService.writeObjectsInRedis(keys, Collections.singleton(userValues));
-            return userMapper.mapToDtoList(users);
+        UserResponseList userResponseList = userCacheService.getValuesFromCache(keys);
+        if (userResponseList!=null){
+            log.info("Value was get from cache!");
+            return userResponseList;
         }
         return userMapper.mapToDtoList(users);
-
-
     }
+
+
 
     @Override
     @Transactional(readOnly = true)
     public UserResponseList findAllByIds(List<Long> ids) {
-        if (ids.isEmpty()){
+        if (ids.isEmpty()) {
             throw new IllegalArgumentException("[Ids is empty or null!]");
         }
-        var idsAsList = new HashSet<>(ids).toString();
+
+        Set<String> cacheKeys = ids.stream()
+                .map(String::valueOf)
+                .map(key->CacheNames.USER_CACHE.getValue()+key)
+                .collect(Collectors.toSet());
+        UserResponseList userResponseList = userCacheService.getValuesFromCache(cacheKeys);
+        if (userResponseList != null) {
+            log.info("Value was getFromCache");
+            return userResponseList;
+        }
         List<UserEntity> users = userRepository.findAllById(ids)
                 .stream()
-                .takeWhile(user -> user.getId() != null)
+                .filter(user -> user.getId() != null)
                 .toList();
-        if (redisService.checkKeysExist(Collections.singleton(idsAsList))){
-            String keysStringValues = ids.stream().map(String::valueOf).toString();
-            Set<String> userIdsKeys = Collections.singleton(keysStringValues);
-            redisService.writeObjectsInRedis(userIdsKeys, new HashSet<>(users));
-            return userMapper.mapToDtoList(users);
-        }
+        userCacheService.putValuesToCache(
+                cacheKeys.stream()
+                        .toList(),
+                Collections.singletonList(
+                        users.stream()
+                        .toString())
+        );
+        log.info("Value was get from db");
         return userMapper.mapToDtoList(users);
-    }
+        }
+
 
     @Override
     @Transactional
@@ -176,15 +196,10 @@ public class UserServiceImpl implements UserService {
             user.setStatus(UserStatus.NEW.name());
             userRepository.save(user);
             var mappedUser = userMapper.mapToDto(user);
-            var cacheKey = String.valueOf(mappedUser.getId());
-            putAndLock(
-                    cacheKey,
-                    mappedUser,
-                    CacheNames.USER_CACHE,
-                    Duration.ofMinutes(1)
-            );
-            publishEvent(user);
+            var key = mappedUser.getId().toString();
+            userCacheService.putToCache(key,mappedUser);
             updateBalanceOfUser(user.getId(), BigDecimal.valueOf(1000.1));
+            publishEvent(user);
             return mappedUser;
     }
 
@@ -192,19 +207,23 @@ public class UserServiceImpl implements UserService {
                             UserResponse userResponse,
                             CacheNames cacheNames,
                             Duration ttl){
-        ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
+        ExecutorService executorService = Executors.newFixedThreadPool(3,threadFactory);
         CompletableFuture.runAsync(()->redisService.putToCache(cacheKey, userResponse,cacheNames),
                         executorService)
                 .thenRunAsync(()->redisLockManager.lock(cacheKey,ttl),
                         executorService)
-                .whenComplete((r,e)->{
-                    if (e!=null){
-                        log.error("Error: {}",e.getMessage());
+                .exceptionally((ex->{
+                    if (ex!=null){
+                        log.error("Error: {}",ex.getMessage());
+                        executorService.close();;
+                        return null;
                     }
                     else {
                         log.info("[Async is done!]");
+                        executorService.close();
+                        return null;
                     }
-                });
+                }));
     }
 
 
@@ -221,40 +240,56 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void updateUser(Long id, UserRequest userRequest) {
-       userRepository.findById(id)
-               .ifPresentOrElse(user->{
-                    isSuccessfulValid(userRequest,user);
-                    user.setUpdatedAt(LocalDateTime.now());
-                    userRepository.save(user);
-                    redisService.writeObjectInRedis(user.getId().toString(),user);
-                    eventPublisher.publishEvent(new UserUpdateEvent(
-                            this,
-                            user.getUsername(),
-                            user.getPhoneNumber(),
-                            user.getUpdatedAt(),
-                            String.valueOf(id)));
-                    log.info("Updated user: {}",user.getUsername());
-                }, ()->{
-                    throw new UserNotFoundException(
-                            MessageFormat.format("[User with id: {0} not found]",id)
-                    );});
+    public UserResponse updateUser(Long id, UserRequest userRequest) {
+        var response = userCacheService.getValueFromCache(String.valueOf(id));
+        if (response!=null){
+            return response;
+        }
+        else {
+            var userEntity = userRepository.findById(id)
+                    .map(user -> {
+                        isSuccessfulValid(userRequest, user);
+                        user.setUpdatedAt(LocalDateTime.now());
+                        userRepository.save(user);
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        objectMapper.registerModule(new JavaTimeModule());
+                        var userDto = userMapper.mapToDto(user);
+                        var cacheKey = userDto.getId().toString();
+                        userCacheService.putToCache(cacheKey,userDto);
+                        eventPublisher.publishEvent(new UserUpdateEvent(
+                                this,
+                                user.getUsername(),
+                                user.getPhoneNumber(),
+                                user.getUpdatedAt(),
+                                String.valueOf(id)));
+                        log.info("Updated user from db: {}", user.getUsername());
+                        return user;
+                    })
+                    .orElseThrow(()->{
+                        throw new UserNotFoundException(
+                                MessageFormat.format("User with id: {} not found",id)
+                        );
+                    });
+            return userMapper.mapToDto(userEntity);
+        }
 
     }
 
-    @Async
+
     public void isSuccessfulValid(UserRequest userRequest, UserEntity user){
-        if (userRequest.getUsername() != null && !userRequest.getUsername().isEmpty()) {
-            user.setUsername(userRequest.getUsername());
-            log.info("[Updated username: {}]",userRequest.getUsername());
-        }
-        if (userRequest.getPassword() != null && !userRequest.getPassword().isEmpty()) {
-            user.setPassword(userRequest.getPassword());
-        }
-        if (userRequest.getPhoneNumber() != null && !userRequest.getPhoneNumber().isEmpty()) {
-            user.setPhoneNumber(userRequest.getPhoneNumber());
-            log.info("[Updated phoneNumber: {}]",userRequest.getPhoneNumber());
-        }
+            if (userRequest.getUsername() != null && !userRequest.getUsername().isEmpty()) {
+                user.setUsername(userRequest.getUsername());
+                log.info("[Updated username: {}]", userRequest.getUsername());
+            }
+            if (userRequest.getPassword() != null && !userRequest.getPassword().isEmpty()) {
+                user.setPassword(userRequest.getPassword());
+                log.info("[Updated password: {}]", userRequest.getPassword());
+            }
+            if (userRequest.getPhoneNumber() != null && !userRequest.getPhoneNumber().isEmpty()) {
+                user.setPhoneNumber(userRequest.getPhoneNumber());
+                log.info("[Updated phoneNumber: {}]", userRequest.getPhoneNumber());
+            }
+
     }
 
     @Override
@@ -286,8 +321,11 @@ public class UserServiceImpl implements UserService {
         var userKeys = new HashSet<>(usersAndTheirStatuses.keySet());
         var userValues = new HashSet<>(usersAndTheirStatuses.values());
 
-        if (redisService.checkKeysExist(userKeys)){
-            redisService.writeObjectsInRedis(userKeys,userValues);
+        if (userCacheService.getValuesFromCache(userKeys)!=null){
+            userCacheService.putValuesToCache(
+                    userKeys.stream().toList(),
+                    userValues.stream().toList()
+            );
         }
         log.info("[Users by status: {}]",usersAndTheirStatuses);
         return UserResponse.builder()
@@ -462,7 +500,10 @@ public class UserServiceImpl implements UserService {
         String cacheKeys = ids.stream().map(String::valueOf).toString();
         Set<String> cacheKeysListValue = Collections.singleton(cacheKeys);
         Set<Object> userValues = new HashSet<>(usersForUpdate);
-        redisService.writeObjectsInRedis(cacheKeysListValue,userValues);
+        userCacheService.putValuesToCache(
+                cacheKeysListValue.stream().toList(),
+                userValues.stream().toList()
+        );
         log.info("[UpdatedUsers: {}]",usersForUpdate);
     }
 
@@ -510,7 +551,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @EventListener
     @TimeResulting
     public void handleUserUpdateEvent(UserUpdateEvent userUpdateEvent) {
         Stream.of(userUpdateEvent)
@@ -539,6 +579,18 @@ public class UserServiceImpl implements UserService {
                 .stream()
                 .map(UserEntity::getBalance)
                 .reduce(BigDecimal.ZERO,BigDecimal::add);
+    }
+
+    @Override
+    public long countAllUser() {
+        return userRepository.count();
+    }
+
+    @Override
+    public long countActiveUsers() {
+        var users = userRepository.countByStatus(UserStatus.ACTIVE);
+        log.info("Users is: {}",users);
+        return users;
     }
 
     @Override

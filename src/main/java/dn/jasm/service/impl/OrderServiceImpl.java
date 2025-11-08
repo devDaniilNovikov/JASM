@@ -1,7 +1,11 @@
 package dn.jasm.service.impl;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.stripe.model.Price;
+import dn.jasm.client.OrderClient;
+import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.item.ItemRequest;
 import dn.jasm.dto.order.OrderMapResponse;
 import dn.jasm.dto.order.OrderRequest;
@@ -24,11 +28,13 @@ import dn.jasm.repository.OrderRepository;
 import dn.jasm.entity.UserEntity;
 import dn.jasm.repository.UserRepository;
 import dn.jasm.service.OrderService;
+import dn.jasm.service.cache.OrderCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,13 +55,17 @@ public class OrderServiceImpl implements OrderService {
     @Value("${order.limit.value}")
     private BigDecimal limit;
 
+    private static final Long MAX_LIMIT_OF_ORDERS_FOR_ONE_REQUEST = 5L;
     private final ItemRepository itemRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ItemMapper itemMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final OrderMapper orderMapper;
-    private final RedisService redisService;
+    private final OrderCacheService orderCacheService;
+    private final ObjectMapper orderObjectMapper;
+
+
 
     private final Map<String,ListOrderResponse> orderWithUsernameOfOwner = new HashMap<>();
 
@@ -65,6 +75,8 @@ public class OrderServiceImpl implements OrderService {
         if (items.isEmpty()) {
             throw new IllegalArgumentException("[Items can't be null]");
         }
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
         OrderEntity order = new OrderEntity();
         var itemList = items.stream()
                 .filter(it -> price.getUnitAmountDecimal().equals(it.getPrice()))
@@ -76,9 +88,11 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setRating(0.0);
         orderRepository.save(order);
+        var orderDto = orderMapper.mapToDto(order);
+        orderCacheService.putInCache(orderDto.getId().toString(),orderDto);
         itemRepository.saveAll(itemList);
         log.info("[Created order: {}]", order.getId());
-        return orderMapper.mapToDto(order);
+        return orderDto;
 
     }
 
@@ -90,37 +104,16 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional
-    public void completeOrder(Long orderId, Long userId) {
-        Thread.startVirtualThread(() -> {
-            var order = orderRepository.findById(orderId)
-                    .stream()
-                    .map(o -> {
-                        BigDecimal orderTotalAmount = calculateTotalAmountOfOrder(o.getItems());
-                        o.setAmount(orderTotalAmount);
-                        o.setPayedAt(true);
-                        o.setCreatedAt(LocalDateTime.now());
-                        o.setOrderStatus(OrderStatus.PAID);
-                        var userWithChangedBalance = userRepository.findById(userId)
-                                .stream()
-                                .peek(user -> {
-                                    var totalBalance = user.getBalance().subtract(orderTotalAmount);
-                                    user.setBalance(totalBalance);
-                                })
-                                .findAny()
-                                .orElseThrow(() -> new UserNotFoundException(
-                                        MessageFormat.format("[User with id: {0} not found]", userId)));
-                        userRepository.save(userWithChangedBalance);
-                        o.setUser(userWithChangedBalance);
-                        userWithChangedBalance.getOrders().add(o);
-                        return orderRepository.save(o);
-                    })
-                    .findAny()
-                    .orElseThrow(RuntimeException::new);
-            log.info("[Order with id #{} completed]", order.getId());
-        });
-
+    public ListOrderResponse findAll(int pageSize, int pageNumber) {
+        PageRequest pageRequest = PageRequest.of(pageSize, pageNumber);
+        ListOrderResponse listOrderResponse = orderMapper.mapToDtoList(
+                orderRepository.findAll(pageRequest)
+                        .getContent());
+        var id = UUID.randomUUID().toString();
+        orderCacheService.putInCache(id,listOrderResponse.toString());
+        return listOrderResponse;
     }
+
 
     @Override
     @Transactional
@@ -149,12 +142,16 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse getOrderById(Long id) {
-        return orderMapper.mapToDto(orderRepository.findById(id)
-                .stream()
-                .peek(order->redisService.writeObjectInRedis(order.getId().toString(),order))
-                .findAny()
+        OrderResponse cache = orderCacheService.getOrderFromCache(String.valueOf(id));
+        if (cache != null) {
+            return orderObjectMapper.convertValue(cache, OrderResponse.class);
+        }
+        OrderEntity orderEntity = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(
-                        MessageFormat.format("[Order with id: {0} not found]", id))));
+                        MessageFormat.format("Order with id: {} not found", id)));
+        OrderResponse orderResponse = orderMapper.mapToDto(orderEntity);
+        orderCacheService.putInCache(orderResponse.getId().toString(), orderResponse);
+        return orderResponse;
     }
 
     @Override
@@ -170,12 +167,13 @@ public class OrderServiceImpl implements OrderService {
         ListOrderResponse cacheValue = orderWithUsernameOfOwner.get(username);
         OrderMapResponse orderMapResponse = new OrderMapResponse();
         orderMapResponse.setOrderMap(orderWithUsernameOfOwner);
-        try {
-            redisService.writeObjectInRedis(username, cacheValue);
-        } catch (RedisKeyException e) {
-            log.error("[This key already put in redis: {}]", username);
+        if (orderCacheService.getOrderFromCache(username)==null){
+            orderCacheService.putInCache(username,cacheValue);
+            return orderMapResponse;
         }
-        return orderMapResponse;
+        else {
+            return orderObjectMapper.convertValue(orderMapResponse, OrderMapResponse.class);
+        }
     }
 
 
@@ -187,7 +185,7 @@ public class OrderServiceImpl implements OrderService {
                 .filter(Objects::nonNull)
                 .flatMap(Collection::stream)
                 .map(ItemEntity::getId)
-                .limit(5)
+                .limit(MAX_LIMIT_OF_ORDERS_FOR_ONE_REQUEST)
                 .toList());
     }
 
@@ -214,7 +212,7 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.mapToDtoList(orderRepository.findAllById(ids)
                 .stream()
                 .filter(order->order.getOrderStatus().equals(OrderStatus.NEW))
-                .peek(order->redisService.writeObjectInRedis(String.valueOf(order.getId()),order))
+                .peek(order->orderCacheService.putInCache(String.valueOf(order.getId()),order))
                 .toList());
 
     }
@@ -244,34 +242,54 @@ public class OrderServiceImpl implements OrderService {
             }
             orderRequest.setTotalAmount(totalAmount.subtract(orderRequest.getDiscount()));
             var orderEntity = orderMapper.mapToEntity(orderRequest,itemsIds);
+            var ownerOfOrder = userRepository.findById(orderRequest.getUserId())
+                    .orElseThrow(() -> new UserNotFoundException("[User not found]"));
+            orderEntity.setUser(ownerOfOrder);
             orderEntity.setOrderStatus(OrderStatus.PAID);
             orderEntity.setPayedAt(true);
             orderEntity.setIsShipped(items
                     .stream()
                     .map(ItemRequest::getIsShippable)
                     .reduce(true,
-                            (t, f)-> true));
+                            (t, f) -> false));
+            var items_ = itemRepository.findAllByIdIn(itemsIds)
+                            .stream()
+                            .toList();
+            items_.forEach(item->item.setOrder(orderEntity));
             log.info("[Processed order status: {}, amount: {}, isShipped: {}]",
                     orderEntity.getOrderStatus(),
                     orderEntity.getAmount(),
                     orderEntity.getIsShipped());
+            orderEntity.setItems(items_);
             orderRepository.save(orderEntity);
-            itemRepository.deleteAllByIdInBatch(itemsIds);
+            itemRepository.saveAll(items_);
+            userRepository.save(ownerOfOrder);
             publishEvent(orderEntity);
         }
 
     @Override
     @EventListener
-    public void handleOrderCreateEvent(OrderCreateEvent orderCreateEvent) {
-        redisService.writeObjectInRedis(String.valueOf(orderCreateEvent.getOrderId()),
-                orderCreateEvent.getStatus());
-        log.info("[Created order event is: {}]",orderCreateEvent);
+    public void handleOrderCreateEvent(OrderCreateEvent order) {
+        var orderStringValue = new OrderCreateEvent(this,
+                order.getOrderId(),
+                order.getPayedAt(),
+                order.getStatus(),
+                order.getTotalAmount(),
+                order.getIsShipped(),
+                order.getItemNames()
+                        .stream()
+                        .toList());
+        orderCacheService.putInCache(
+                String.valueOf(order.getOrderId()), orderStringValue
+        );
+        log.info("[Created order event is: {}]",order);
     }
 
 
     private void publishEvent(OrderEntity order) {
-        var itemIds = order.getItems().stream()
-                .map(ItemEntity::getId)
+        var itemNames = order.getItems()
+                .stream()
+                .map(ItemEntity::getName)
                 .toList();
         eventPublisher.publishEvent(
                     new OrderCreateEvent(this,
@@ -280,7 +298,7 @@ public class OrderServiceImpl implements OrderService {
                         order.getOrderStatus().name(),
                         order.getAmount(),
                         order.getIsShipped(),
-                        itemIds));
+                        itemNames));
         }
 
 

@@ -11,10 +11,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -27,7 +30,7 @@ public class UserController {
     private static final String DELETE_USERS_BY_IDS = "/api/v1/users/delete";
     private static final String GET_ALL_USERS = "/api/v1/user/users-list";
     private static final String GET_USER_BY_ID = "/api/v1/user/{id}";
-    private static final String GET_BY_USERNAME = "/api/v1/user";
+    private static final String GET_BY_USERNAME = "/api/v1/user/user-by-name/{username}";
     private static final String BAN_USER_BY_ID = "/api/v1/user/ban";
     private static final String GET_USERS_BY_STATUS = "/api/v1/user/users/status";
     private static final String GET_USER_BY_PHONE_NUMBER = "/api/v1/user/by-phoneNumber";
@@ -38,6 +41,7 @@ public class UserController {
     private static final String GET_TRANSACTIONS_OF_USER = "/api/v1/user/transactions";
     private static final String GET_CARDS_OF_USER = "/api/v1/user/cards";
     private static final String GET_BALANCE_OF_USER = "/api/v1/user/balance";
+    private static final String GET_STATS = "/api/v1/user/stats";
 
     private final UserService userService;
 
@@ -108,7 +112,7 @@ public class UserController {
     @GetMapping(GET_BY_USERNAME)
     @ResponseStatus(HttpStatus.OK)
     @SwaggerAnnotationForUser(operation = "Получение пользователя по его никнейму")
-    public UserResponse getByUsername(@RequestParam String username){
+    public UserResponse getByUsername(@PathVariable String username){
         return userService.findByUsername(username);
     }
 
@@ -154,4 +158,5 @@ public class UserController {
     public void deleteUsersByIds(@RequestParam List<Long> ids){
         userService.deleteMultipleUsers(ids);
     }
+
 }

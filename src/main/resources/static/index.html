@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>JASM Admin Panel</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        :root{
+            --bg1:#0b1021; --bg2:#1c1142; --bg3:#0f2747;
+            --ac1:#8a2be2; --ac2:#ff6b6b; --ac3:#22d3ee; --ac4:#ffa928;
+            --txt:#e8ecf2; --muted:#9aa4b2; --shadow:0 20px 40px rgba(0,0,0,.35);
+            --radius:18px; --radius-sm:12px; --speed:.35s; --speed-slow:.6s;
+            --get:#10b981; --post:#3b82f6; --put:#f59e0b; --del:#ef4444; --patch:#a855f7;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0; font-family:Inter,system-ui,sans-serif; color:var(--txt);
+            background: radial-gradient(1000px 700px at 10% -10%, rgba(255,105,180,.18), transparent 60%),
+            radial-gradient(1000px 700px at 90% 20%, rgba(34,211,238,.18), transparent 60%),
+            linear-gradient(135deg,var(--bg1),var(--bg2) 50%, var(--bg3));
+            background-attachment: fixed; overflow-x:hidden;
+        }
+        .topbar{
+            position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between;
+            padding:16px 24px; backdrop-filter: blur(12px);
+            background:linear-gradient(180deg, rgba(10,10,15,.65), rgba(10,10,15,.15));
+            border-bottom:1px solid rgba(255,255,255,.06);
+        }
+        .brand{ display:flex; align-items:center; gap:12px; font-weight:800; letter-spacing:.3px; font-size:20px; }
+        .logo{
+            width:34px; height:34px; border-radius:10px;
+            background: conic-gradient(from 120deg, var(--ac1), var(--ac2), var(--ac3), var(--ac4), var(--ac1));
+            animation: spinHue 10s linear infinite;
+            box-shadow: 0 0 0 3px rgba(255,255,255,.08), 0 8px 28px rgba(138,43,226,.35);
+        }
+        @keyframes spinHue { to{ filter:hue-rotate(360deg); } }
+        .nav{ display:flex; gap:8px; padding:6px; border-radius:12px; background:rgba(255,255,255,.06); }
+        .tab{
+            appearance:none; border:0; background:transparent; color:var(--txt); cursor:pointer;
+            padding:10px 14px; border-radius:10px; font-weight:600; letter-spacing:.2px;
+            transition: all var(--speed) ease;
+        }
+        .tab:hover{ background:rgba(255,255,255,.08); transform: translateY(-1px); }
+        .tab.active{ background:linear-gradient(135deg, rgba(138,43,226,.6), rgba(34,211,238,.45)); box-shadow: var(--shadow) }
+        .wrap{ max-width:1280px; margin:24px auto; padding:0 16px; }
+        .hero{
+            padding:18px; border-radius: var(--radius);
+            background:linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+            border:1px solid rgba(255,255,255,.12); box-shadow: var(--shadow);
+            display:flex; align-items:center; justify-content:space-between; gap:16px;
+        }
+        .hero h1{ margin:8px 0 0; font-size:24px }
+        .hero p{ margin:6px 0 0; color:var(--muted) }
+        .glow{
+            height:56px; padding:0 18px; display:inline-flex; align-items:center; gap:10px; font-weight:700;
+            color:#0b1021; border-radius:14px; background:linear-gradient(135deg, var(--ac3), var(--ac4));
+            box-shadow: 0 12px 30px rgba(255,169,40,.35), 0 6px 16px rgba(34,211,238,.28);
+        }
+        .sections{ margin-top:22px; }
+        .section{ display:none; animation: fadeUp var(--speed-slow) ease both; }
+        .section.active{ display:block; }
+        @keyframes fadeUp{ from{ opacity:0; transform: translateY(12px) scale(.98) } to{ opacity:1; transform:none } }
+        .stats{ display:grid; grid-template-columns: repeat(4,1fr); gap:16px; }
+        .card{
+            background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
+            border:1px solid rgba(255,255,255,.12);
+            border-radius: var(--radius); padding:18px; box-shadow: var(--shadow);
+        }
+        .kpi{ font-size:12px; color:var(--muted); letter-spacing:.3px; }
+        .val{ font-size:32px; font-weight:800; margin-top:6px; text-shadow:0 2px 16px rgba(0,0,0,.25); }
+        .badge{ display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;
+            background:linear-gradient(135deg, rgba(34,211,238,.25), rgba(138,43,226,.25)); border:1px solid rgba(255,255,255,.18); }
+        .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px }
+        .btn{
+            appearance:none; border:0; cursor:pointer; padding:10px 14px; border-radius:10px; font-weight:700;
+            background: linear-gradient(135deg, var(--ac1), var(--ac2)); color:white;
+            box-shadow: 0 10px 22px rgba(255,107,107,.35); transition: all var(--speed);
+        }
+        .btn:hover{ transform: translateY(-2px); filter:saturate(1.1); }
+        .btn.secondary{ background:linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); color:var(--txt) }
+        .btn.small{ padding:8px 10px; border-radius:9px; font-size:12px }
+        .input, .select{
+            background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:var(--txt);
+            border-radius:10px; padding:10px 12px; outline:none; min-width:180px;
+        }
+        table{ width:100%; border-collapse: collapse; }
+        thead th{
+            text-align:left; font-size:12px; letter-spacing:.3px; color:var(--muted); padding:12px; background:rgba(255,255,255,.04);
+        }
+        tbody td{ padding:12px; border-top:1px dashed rgba(255,255,255,.08) }
+        .row-actions{ display:flex; gap:8px }
+        .icon-btn{
+            background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:var(--txt);
+            width:36px; height:36px; display:grid; place-items:center; border-radius:10px; cursor:pointer; transition:all var(--speed);
+        }
+        .icon-btn:hover{ transform: translateY(-1px) scale(1.02); background:rgba(255,255,255,.12) }
+        .pagination{ display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:12px }
+        .page-info{ color:var(--muted); font-size:12px }
+        .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:100;
+            background: rgba(6,8,14,.65); backdrop-filter: blur(8px); }
+        .modal.show{ display:flex }
+        .modal .panel{
+            width:min(560px, 92vw); border-radius:18px; padding:18px; background:linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.04));
+            border:1px solid rgba(255,255,255,.12); box-shadow: var(--shadow); animation: pop var(--speed) ease both;
+        }
+        @keyframes pop{ from{ transform: translateY(12px) scale(.96); opacity:0 } to{ transform:none; opacity:1 } }
+        .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+        .form-grid .full{ grid-column:1/-1 }
+        label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px }
+        .toast{
+            position:fixed; right:20px; bottom:20px; padding:12px 16px; border-radius:12px; font-weight:700;
+            background:linear-gradient(135deg, rgba(34,211,238,.9), rgba(138,43,226,.9)); color:#0b1021;
+            box-shadow: var(--shadow); opacity:0; transform: translateY(8px); pointer-events:none; transition: all .4s ease; z-index:200;
+        }
+        .toast.show{ opacity:1; transform:none }
+        .toast.err{ background:linear-gradient(135deg, rgba(255,107,107,.95), rgba(255,169,40,.95)); color:#190b2a }
+        .shimmer{ position:relative; overflow:hidden; background:rgba(255,255,255,.06); border-radius:12px; min-height:120px; }
+        .shimmer::after{ content:""; position:absolute; inset:0; transform: translateX(-100%);
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,.18), transparent);
+            animation: loading 1.2s ease-in-out infinite; }
+        @keyframes loading { to{ transform: translateX(100%)} }
+        .api-grid{ display:grid; grid-template-columns: 280px 1fr; gap:16px }
+        .panel{ background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
+            border:1px solid rgba(255,255,255,.12); border-radius: var(--radius); padding:14px; }
+        .tag{ display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:10px; cursor:pointer; }
+        .tag.active{ background:rgba(255,255,255,.08) }
+        .op{ border:1px dashed rgba(255,255,255,.12); border-radius:12px; padding:12px; margin-bottom:10px; }
+        .op-head{ display:flex; gap:10px; align-items:center; justify-content:space-between; cursor:pointer; }
+        .method{ font-weight:800; padding:4px 8px; border-radius:8px; font-size:12px; }
+        .m-get{ background:rgba(16,185,129,.2); border:1px solid rgba(16,185,129,.35) }
+        .m-post{ background:rgba(59,130,246,.2); border:1px solid rgba(59,130,246,.35) }
+        .m-put{ background:rgba(245,158,11,.2); border:1px solid rgba(245,158,11,.35) }
+        .m-delete{ background:rgba(239,68,68,.2); border:1px solid rgba(239,68,68,.35) }
+        .m-patch{ background:rgba(168,85,247,.2); border:1px solid rgba(168,85,247,.35) }
+        .kv{ display:grid; grid-template-columns: 180px 1fr; gap:8px; margin:8px 0 }
+        .monospace{ font-family: ui-monospace,monospace; font-size:12px }
+        .response{ background:#0e1427; border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px; overflow:auto; max-height:280px }
+        .hint{ color:var(--muted); font-size:12px }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+            <div style="font-size:12px;color:var(--muted);letter-spacing:.3px">Панель управления</div>
+            <div>JASM</div>
+        </div>
+    </div>
+    <nav class="nav" id="nav">
+        <button class="tab active" data-route="overview">Обзор</button>
+        <button class="tab" data-route="users">Пользователи</button>
+        <button class="tab" data-route="orders">Заказы</button>
+        <button class="tab" data-route="transactions">Транзакции</button>
+        <button class="tab" data-route="api">API</button>
+    </nav>
+</header>
+
+<main class="wrap">
+    <section class="hero">
+        <div>
+            <span class="badge">Online</span>
+            <h1>JASM Admin Panel</h1>
+            <p>SPA с управлением данными и динамическим API-Explorer.</p>
+        </div>
+        <div class="glow">v3.0</div>
+    </section>
+
+    <section class="sections">
+        <!-- Overview -->
+        <div id="section-overview" class="section active">
+            <div class="stats" id="statsGrid">
+                <div class="card"><div class="kpi">Всего пользователей</div><div class="val" id="kpi-total">0</div></div>
+                <div class="card"><div class="kpi">Активных</div><div class="val" id="kpi-active">0</div></div>
+                <div class="card"><div class="kpi">Всего заказов</div><div class="val" id="kpi-orders">0</div></div>
+                <div class="card"><div class="kpi">Общий доход</div><div class="val" id="kpi-revenue">$0</div></div>
+            </div>
+        </div>
+
+        <!-- Users -->
+        <div id="section-users" class="section">
+            <div class="card">
+                <div class="toolbar">
+                    <button class="btn" id="btn-create">Создать</button>
+                    <input class="input" id="searchInput" placeholder="Поиск по имени..." />
+                    <select class="select" id="statusFilter">
+                        <option value="">Все статусы</option>
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="BANNED">BANNED</option>
+                        <option value="NEW">NEW</option>
+                    </select>
+                </div>
+                <div style="overflow-x:auto">
+                    <table id="usersTable">
+                        <thead><tr><th>ID</th><th>Имя</th><th>Телефон</th><th>Статус</th><th>Действия</th></tr></thead>
+                        <tbody id="usersBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <span class="page-info" id="pageInfo"></span>
+                    <button class="btn secondary small" id="prevPage">Назад</button>
+                    <button class="btn secondary small" id="nextPage">Вперед</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders -->
+        <div id="section-orders" class="section">
+            <div class="card">
+                <div class="toolbar"><h2 class="kpi">Последние заказы</h2></div>
+                <div style="overflow-x:auto">
+                    <table id="ordersTable">
+                        <thead><tr><th>ID</th><th>Пользователь</th><th>Сумма</th><th>Статус</th><th>Дата</th></tr></thead>
+                        <tbody id="ordersBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions -->
+        <div id="section-transactions" class="section">
+            <div class="card">
+                <div class="toolbar"><h2 class="kpi">Последние транзакции</h2></div>
+                <div style="overflow-x:auto">
+                    <table id="transactionsTable">
+                        <thead><tr><th>ID</th><th>Сумма</th><th>Тип</th><th>Статус</th><th>Дата</th></tr></thead>
+                        <tbody id="transactionsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Explorer -->
+        <div id="section-api" class="section">
+            <div class="api-grid">
+                <div class="panel">
+                    <div class="toolbar">
+                        <input id="apiSearch" class="input" placeholder="Фильтр по тегам/путям" style="width:100%">
+                        <button id="reloadApi" class="icon-btn" title="Обновить схему API">🔄</button>
+                    </div>
+                    <div id="tagsList"></div>
+                </div>
+                <div class="panel" id="opsList"></div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Modal -->
+<div class="modal" id="userModal" aria-hidden="true">
+    <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="kpi">Создать пользователя</div>
+            <button class="icon-btn" id="closeModal">✕</button>
+        </div>
+        <form id="userForm" style="margin-top:12px">
+            <div class="form-grid">
+                <div class="full"><label for="username">Имя пользователя</label><input id="username" name="username" class="input" required></div>
+                <div class="full"><label for="email">Email</label><input id="email" name="email" type="email" class="input" required></div>
+                <div><label for="phoneNumber">Телефон</label><input id="phoneNumber" name="phoneNumber" class="input"></div>
+                <div><label for="password">Пароль</label><input id="password" name="password" type="password" class="input" required></div>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px">
+                <button type="button" class="btn secondary" id="cancelModal">Отмена</button>
+                <button type="submit" class="btn">Создать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="toast" id="toast">Готово</div>
+
+<script>
+    const api = {
+        // Известные пути для удобства
+        stats: '/api/v1/user/stats',
+        usersPaged: '/api/v1/user/users-list',
+        createUser: '/api/v1/user/create',
+        deleteUser: id => `/api/v1/user/delete?id=${encodeURIComponent(id)}`,
+        banUser: id => `/api/v1/user/ban?id=${encodeURIComponent(id)}`,
+        usersByStatus: s => `/api/v1/user/users/status?status=${encodeURIComponent(s)}`,
+        byUsername: u => `/api/v1/user/user-by-name/${encodeURIComponent(u)}`,
+        orders: '/api/v1/order/all',
+        transactions: '/api/v1/transaction/all',
+        // OpenAPI
+        openApi: '/v3/api-docs'
+    };
+
+    const state = { page:0, size:10, totalPages:1, users:[], apiDoc:null, tag:null, filter:'' };
+
+    // --- UTILS ---
+    const byId = id => document.getElementById(id);
+    function showToast(msg, err=false){
+        const t = byId('toast');
+        t.textContent = msg; t.classList.toggle('err', !!err);
+        t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2200);
+    }
+    async function fetchJSON(url, options){
+        try {
+            const res = await fetch(url, options || {});
+            const ct = res.headers.get('content-type')||'';
+            let body = null;
+            try { body = ct.includes('application/json') ? await res.json() : await res.text(); } catch {}
+            if(!res.ok) throw { status:res.status, body };
+            return { body, status:res.status };
+        } catch (err) {
+            console.error(`Fetch error for ${url}:`, err);
+            const message = (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || `Request failed: ${err.status || ''}`;
+            showToast(message, true);
+            throw err;
+        }
+    }
+    function animateCount(el, to){
+        if (!el) return;
+        const from = parseInt(el.textContent.replace(/\D/g, '')) || 0;
+        const dur = 700, start = performance.now();
+        const step = now => {
+            const t = Math.min(1, (now-start)/dur);
+            const v = Math.floor(from + (to-from) * (1 - Math.pow(1-t,3)));
+            el.textContent = v;
+            if(t<1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+    function renderShimmer(container, count = 5) {
+        container.innerHTML = Array(count).fill('<tr><td colspan="5"><div class="shimmer" style="min-height:24px"></div></td></tr>').join('');
+    }
+
+    // --- ROUTER ---
+    function setActive(route){
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        byId('section-' + route)?.classList.add('active');
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.route===route));
+        // Lazy-load data on tab activation
+        const loaders = {
+            overview: loadStats,
+            users: loadUsers,
+            orders: loadOrders,
+            transactions: loadTransactions,
+            api: ensureOpenApi,
+        };
+        loaders[route]?.();
+    }
+
+    // --- DATA LOADERS ---
+    async function loadStats(){
+        byId('statsGrid').classList.add('shimmer');
+        try {
+            const { body } = await fetchJSON(api.stats);
+            animateCount(byId('kpi-total'), body.totalUsers || 0);
+            animateCount(byId('kpi-active'), body.activeUsers || 0);
+            animateCount(byId('kpi-orders'), body.totalOrders || 0);
+            byId('kpi-revenue').textContent = `$${(body.revenue || 0).toFixed(2)}`;
+        } catch {
+            showToast('Не удалось загрузить статистику', true);
+        } finally {
+            byId('statsGrid').classList.remove('shimmer');
+        }
+    }
+
+    function normalizePayload(data, key = 'users') {
+        const items = data?.[key] || data?.content || data?.items || (Array.isArray(data) ? data : []);
+        const totalPages = data?.totalPages ?? data?.page?.totalPages ?? 1;
+        const page = data?.pageNumber ?? data?.page?.number ?? state.page;
+        return { items, totalPages, page };
+    }
+
+    async function loadGenericTable(endpoint, tbodyId, rowRenderer, key) {
+        const tbody = byId(tbodyId);
+        renderShimmer(tbody);
+        try {
+            const { body } = await fetchJSON(endpoint);
+            const { items } = normalizePayload(body, key);
+            if (!items.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="hint">Нет данных</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = items.map(rowRenderer).join('');
+        } catch {
+            tbody.innerHTML = `<tr><td colspan="5" class="hint" style="color:var(--err)">Ошибка загрузки</td></tr>`;
+        }
+    }
+
+    const loadOrders = () => loadGenericTable(api.orders, 'ordersBody', orderRow, 'orders');
+    const loadTransactions = () => loadGenericTable(api.transactions, 'transactionsBody', transactionRow, 'transactions');
+
+    async function loadUsers(){
+        const tbody = byId('usersBody');
+        renderShimmer(tbody);
+        try {
+            const { body } = await fetchJSON(`${api.usersPaged}?pageNumber=${state.page}&pageSize=${state.size}`);
+            const { items, totalPages, page } = normalizePayload(body, 'users');
+            state.users = items;
+            state.totalPages = totalPages;
+            state.page = page;
+            renderUsers();
+        } catch {
+            tbody.innerHTML = `<tr><td colspan="5" class="hint" style="color:var(--err)">Ошибка загрузки пользователей</td></tr>`;
+        }
+        updatePagination();
+    }
+
+    // --- RENDERERS ---
+    const userRow = u => `
+        <tr>
+            <td class="hint">${u.id ?? '-'}</td>
+            <td>${u.username || u.name || '(нет)'}</td>
+            <td class="hint">${u.phoneNumber || ''}</td>
+            <td><span class="badge" style="${u.status==='ACTIVE'?'background:rgba(34,211,238,.25)':u.status==='BANNED'?'background:rgba(255,107,107,.25)':'background:rgba(255,255,255,.1)'}">${u.status || 'NEW'}</span></td>
+            <td class="row-actions">
+                <button class="icon-btn" onclick="banUser('${u.id}')" title="Ban/Unban">🚫</button>
+                <button class="icon-btn" onclick="deleteUser('${u.id}')" title="Delete">🗑️</button>
+            </td>
+        </tr>`;
+
+    const orderRow = o => `
+        <tr>
+            <td class="hint">${o.id ?? '-'}</td>
+            <td>${o.user?.username || o.userId || '-'}</td>
+            <td>$${(o.totalAmount || 0).toFixed(2)}</td>
+            <td><span class="badge">${o.status || 'UNKNOWN'}</span></td>
+            <td class="hint">${new Date(o.createdAt || Date.now()).toLocaleDateString()}</td>
+        </tr>`;
+
+    const transactionRow = t => `
+        <tr>
+            <td class="hint">${t.id ?? '-'}</td>
+            <td>$${(t.amount || 0).toFixed(2)}</td>
+            <td>${t.type || '-'}</td>
+            <td><span class="badge">${t.status || 'UNKNOWN'}</span></td>
+            <td class="hint">${new Date(t.createdAt || Date.now()).toLocaleDateString()}</td>
+        </tr>`;
+
+    function renderUsers(){
+        const tbody = byId('usersBody');
+        if(!state.users.length){ tbody.innerHTML = `<tr><td colspan="5" class="hint">Пользователи не найдены</td></tr>`; return; }
+        tbody.innerHTML = state.users.map(userRow).join('');
+    }
+
+    function updatePagination(){
+        byId('pageInfo').textContent = `Стр. ${state.page+1} / ${state.totalPages}`;
+        byId('prevPage').disabled = state.page<=0;
+        byId('nextPage').disabled = state.page>=state.totalPages-1;
+    }
+
+    // --- USER ACTIONS ---
+    async function createUser(payload){
+        await fetchJSON(api.createUser, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        showToast('Пользователь создан'); state.page = 0; await loadUsers();
+    }
+    async function deleteUser(id){
+        if(!confirm('Удалить пользователя?')) return;
+        await fetchJSON(api.deleteUser(id), { method:'DELETE' });
+        showToast('Пользователь удалён'); await loadUsers();
+    }
+    async function banUser(id){
+        await fetchJSON(api.banUser(id), { method:'PATCH' });
+        showToast('Статус изменён'); await loadUsers();
+    }
+    window.deleteUser = deleteUser; window.banUser = banUser;
+
+    async function filterByStatus(status){
+        if(!status){ return loadUsers(); }
+        renderShimmer(byId('usersBody'));
+        try{
+            const { body } = await fetchJSON(api.usersByStatus(status));
+            const { items } = normalizePayload(body);
+            state.users = items; state.totalPages = 1; state.page = 0; renderUsers(); updatePagination();
+        } catch { /* handled by fetchJSON */ }
+    }
+    async function searchByUsername(q){
+        if(!q){ return loadUsers(); }
+        renderShimmer(byId('usersBody'));
+        try{
+            const { body } = await fetchJSON(api.byUsername(q));
+            const list = Array.isArray(body?.users)? body.users : (body ? [body.user || body] : []);
+            state.users = list.filter(Boolean); state.totalPages = 1; state.page = 0; renderUsers(); updatePagination();
+        } catch { /* no-op, e.g. 404 is expected */ }
+    }
+
+    // --- API EXPLORER ---
+    const methodClass = m => `m-${m.toLowerCase()}`;
+    async function ensureOpenApi(){ if(state.apiDoc) return; await loadOpenApi(); }
+    async function loadOpenApi(){
+        byId('opsList').innerHTML = `<div class="shimmer" style="min-height:180px"></div>`;
+        try{
+            const { body } = await fetchJSON(api.openApi);
+            state.apiDoc = body;
+            renderTags(); renderOps(); showToast('OpenAPI схема загружена');
+        }catch{ byId('opsList').innerHTML = `<div class="hint">OpenAPI недоступен по ${api.openApi}</div>`; }
+    }
+    const allTagsFromDoc = doc => Array.from(new Set(Object.values(doc.paths||{}).flatMap(item => Object.values(item).flatMap(op => op.tags || [])))).sort();
+
+    function renderTags(){
+        const box = byId('tagsList'); box.innerHTML = '';
+        const tags = allTagsFromDoc(state.apiDoc);
+        const filter = state.filter?.toLowerCase()||'';
+        const btnAll = Object.assign(document.createElement('div'), {
+            className: 'tag' + (!state.tag?' active':''),
+            innerHTML: `<div>Все теги</div><div class="hint">${tags.length}</div>`,
+            onclick: ()=>{ state.tag=null; renderTags(); renderOps(); }
+        });
+        box.appendChild(btnAll);
+        for(const t of tags){
+            if(filter && !t.toLowerCase().includes(filter)) continue;
+            const el = Object.assign(document.createElement('div'), {
+                className: 'tag' + (state.tag===t?' active':''),
+                innerHTML: `<div>${t}</div>`,
+                onclick: ()=>{ state.tag = (state.tag===t? null : t); renderTags(); renderOps(); }
+            });
+            box.appendChild(el);
+        }
+    }
+
+    function renderOps(){
+        const root = byId('opsList'); root.innerHTML = '';
+        const doc = state.apiDoc; if(!doc){ root.innerHTML = `<div class="hint">Нет данных</div>`; return; }
+        const filter = (state.filter||'').toLowerCase();
+        const entries = Object.entries(doc.paths||{}).flatMap(([path, item]) =>
+            Object.entries(item).map(([method, op]) => ({path, method, op}))
+        ).filter(({path, op}) =>
+            (!state.tag || (op.tags && op.tags.includes(state.tag))) &&
+            (!filter || path.toLowerCase().includes(filter) || (op.summary||'').toLowerCase().includes(filter))
+        );
+        if(!entries.length){ root.innerHTML = `<div class="hint">Ничего не найдено</div>`; return; }
+        entries.sort((a,b)=> a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
+        for(const {path, method, op} of entries){ root.appendChild(buildOp(path, method, op)); }
+    }
+
+    function buildOp(path, method, op){
+        const wrap = document.createElement('div'); wrap.className = 'op';
+        const head = document.createElement('div'); head.className = 'op-head';
+        head.innerHTML = `<div style="display:flex;gap:10px;align-items:center"><span class="method ${methodClass(method)}">${method.toUpperCase()}</span><span class="monospace">${path}</span></div><div class="hint">${op.summary||''}</div>`;
+        const body = document.createElement('div'); body.style.display = 'none';
+        const paramsBox = document.createElement('div');
+        paramsBox.innerHTML = `<div class="kpi">Параметры</div>`;
+
+        const paramValues = {};
+        (op.parameters||[]).forEach(p=>{
+            const row = document.createElement('div'); row.className = 'kv';
+            const input = Object.assign(document.createElement('input'), { className: 'input', placeholder: p.description||'' });
+            input.oninput = ()=>{ paramValues[p.in] = paramValues[p.in]||{}; paramValues[p.in][p.name] = input.value; };
+            row.innerHTML = `<label class="hint">${p.name} (${p.in})${p.required? ' *':''}</label>`;
+            row.appendChild(input); paramsBox.appendChild(row);
+        });
+
+        let bodyText = '';
+        if(op.requestBody?.content){
+            const ct = Object.keys(op.requestBody.content)[0]||'application/json';
+            const ex = op.requestBody.content[ct]?.schema?.example || '';
+            bodyText = typeof ex==='object' ? JSON.stringify(ex, null, 2) : (ex||'');
+            const ta = Object.assign(document.createElement('textarea'), { className:'input monospace', style:'min-height:120px', value: bodyText });
+            ta.oninput = ()=> bodyText = ta.value;
+            const row = document.createElement('div'); row.className='kv';
+            row.innerHTML = `<label class="hint">Тело (${ct})</label>`;
+            row.appendChild(ta); paramsBox.appendChild(row);
+        }
+
+        const run = Object.assign(document.createElement('button'), { className:'btn small', textContent:'Выполнить' });
+        const resultBox = document.createElement('div');
+        run.onclick = async ()=>{
+            let finalPath = path;
+            Object.entries(paramValues.path||{}).forEach(([k,v])=> finalPath = finalPath.replace(`{${k}}`, encodeURIComponent(v)));
+            const query = new URLSearchParams(paramValues.query||{}).toString();
+            const url = finalPath + (query ? '?'+query : '');
+            const options = { method: method.toUpperCase(), headers: {} };
+            if(bodyText) { options.headers['Content-Type'] = 'application/json'; options.body = bodyText; }
+            resultBox.innerHTML = `<div class="shimmer" style="min-height:40px"></div>`;
+            try {
+                const { body, status } = await fetchJSON(url, options);
+                resultBox.innerHTML = `<div class="hint">Status: ${status}</div><pre class="response monospace">${JSON.stringify(body, null, 2)}</pre>`;
+            } catch (e) {
+                resultBox.innerHTML = `<div class="hint" style="color:var(--err)">Error: ${e.status}</div><pre class="response monospace">${JSON.stringify(e.body, null, 2)}</pre>`;
+            }
+        };
+
+        body.appendChild(paramsBox);
+        const actions = document.createElement('div'); actions.style.cssText='display:flex;gap:8px;margin-top:8px';
+        actions.appendChild(run); body.appendChild(actions); body.appendChild(resultBox);
+        head.onclick = ()=> body.style.display = body.style.display==='none' ? 'block' : 'none';
+        wrap.appendChild(head); wrap.appendChild(body);
+        return wrap;
+    }
+
+    // --- EVENT LISTENERS ---
+    function setupListeners() {
+        // Modal
+        const modal = byId('userModal');
+        byId('btn-create').addEventListener('click', ()=> modal.classList.add('show'));
+        byId('closeModal').addEventListener('click', ()=> modal.classList.remove('show'));
+        byId('cancelModal').addEventListener('click', ()=> modal.classList.remove('show'));
+        byId('userForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const payload = Object.fromEntries(new FormData(e.target).entries());
+            try{ await createUser(payload); modal.classList.remove('show'); e.target.reset(); }
+            catch { /* handled by fetchJSON */ }
+        });
+
+        // Nav
+        byId('nav').addEventListener('click', e => {
+            const btn = e.target.closest('.tab'); if(!btn) return;
+            const r = btn.dataset.route; history.replaceState(null, '', '#'+r); setActive(r);
+        });
+
+        // Toolbar
+        byId('prevPage').addEventListener('click', ()=>{ if(state.page>0){ state.page--; loadUsers(); } });
+        byId('nextPage').addEventListener('click', ()=>{ if(state.page<state.totalPages-1){ state.page++; loadUsers(); } });
+        byId('statusFilter').addEventListener('change', e=> filterByStatus(e.target.value));
+        let searchDebounce;
+        byId('searchInput').addEventListener('input', e=>{
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(()=> searchByUsername(e.target.value.trim()), 350);
+        });
+
+        // API Explorer
+        byId('apiSearch').addEventListener('input', e=>{ state.filter = e.target.value; renderTags(); renderOps(); });
+        byId('reloadApi').addEventListener('click', async ()=>{ state.apiDoc=null; await loadOpenApi(); });
+    }
+
+    // --- INIT ---
+    (function init(){
+        setupListeners();
+        const route = (location.hash || '#overview').slice(1);
+        setActive(route);
+        window.addEventListener('hashchange', ()=> setActive((location.hash||'#overview').slice(1)));
+    })();
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import dn.jasm.entity.UserEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,8 +25,8 @@ public class UserMapper {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(LocalDate.now())
+                .updatedAt(LocalDate.now())
                 .userStatus(user.getStatus())
                 .build();
     }

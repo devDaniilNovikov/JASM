@@ -1,5 +1,6 @@
 package dn.jasm.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import dn.jasm.entity.enums.CardType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -18,12 +19,13 @@ public class CardEntity extends BasedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY,cascade = CascadeType.PERSIST)
     @JoinColumn(name = "user_id")
-    @JsonBackReference
+    @JsonBackReference("user-cards")
     private UserEntity user;
 
     private String fio;
 
     @OneToMany(mappedBy = "card",fetch = FetchType.LAZY)
+    @JsonManagedReference("card-payments")
     private List<PaymentEntity> paymentEntity = new ArrayList<>();
 
     @Column(nullable = false)
@@ -45,6 +47,7 @@ public class CardEntity extends BasedEntity {
     private Long expYear;
 
     @OneToMany(mappedBy = "card",fetch = FetchType.LAZY)
+    @JsonManagedReference("card-transactions")
     private Set<TransactionEntity> transactions = new HashSet<>();
 
     @Enumerated(EnumType.STRING)

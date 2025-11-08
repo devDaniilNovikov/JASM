@@ -12,7 +12,7 @@ import java.util.Map;
 
 public interface CommentService {
 
-    void addComment(CommentRequest commentRequest, Long userId);
+    void addComment(CommentRequest commentRequest);
 
     CommentResponse getCommentById(Long id);
 

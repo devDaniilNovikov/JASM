@@ -2,6 +2,7 @@ package dn.jasm.service.impl;
 
 import com.stripe.model.Price;
 import com.stripe.model.Product;
+import dn.jasm.dto.item.ItemRequest;
 import dn.jasm.entity.ItemEntity;
 import dn.jasm.entity.OrderEntity;
 import dn.jasm.repository.ItemRepository;
@@ -34,6 +35,18 @@ public class ItemServiceImpl implements ItemService {
         itemRepository.save(item);
         log.info("[Created item: {}]", item.getName());
         return item;
+    }
+
+    @Override
+    public ItemEntity addItem(ItemRequest itemRequest){
+        ItemEntity itemEntity = new ItemEntity();
+        itemEntity.setName(itemRequest.getName());
+        itemEntity.setIsShippable(true);
+        itemEntity.setDescription(itemRequest.getDescription());
+        itemEntity.setPrice(itemRequest.getPrice());
+        itemEntity.setQuantity(itemRequest.getQuantity());
+        itemRepository.save(itemEntity);
+        return itemEntity;
     }
 
 

@@ -25,7 +25,7 @@ public class OrderEntity extends BasedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY,cascade = {CascadeType.PERSIST,CascadeType.MERGE})
     @JoinColumn(name = "user_id")
-    @JsonBackReference
+    @JsonBackReference("user-orders")
     private UserEntity user;
 
     @Column(nullable = false)
@@ -44,12 +44,12 @@ public class OrderEntity extends BasedEntity {
 
     @OneToOne(cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_id")
-    @JsonManagedReference
+    @JsonManagedReference("order-transaction")
     @OnDelete(action = OnDeleteAction.CASCADE)
     private TransactionEntity transactionEntity;
 
     @OneToMany(mappedBy = "order",fetch = FetchType.LAZY)
-    @JsonManagedReference
+    @JsonManagedReference("order-items")
     private List<ItemEntity> items = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)

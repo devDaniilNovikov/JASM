@@ -79,7 +79,7 @@ public class RabbitConfig {
         return Executors.newFixedThreadPool(3,threadFactory());
     }
 
-    @Bean()
+    @Bean("threadFactory")
     public ThreadFactory threadFactory(){
         ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
         taskExecutor.setCorePoolSize(5);

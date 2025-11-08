@@ -24,7 +24,10 @@ spring:
     username: daniilnovikov
     password: demo2228
     url: jdbc:postgresql://localhost:5432/postgres
-#  elasticsearch:
+  web:
+    resources:
+      static-locations: classpath:/static/
+  #  elasticsearch:
 #    uris: ${ELASTIC_URI}
 #    username: ${ELASTIC_USERNAME}
 #    password: ${ELASTIC_PASSWORD}
@@ -82,7 +85,7 @@ spring:
   cache:
     type: redis
     redis:
-      time-to-live: 5
+      time-to-live: 5m
       cache-null-values: false
       use-key-prefix: true
       enable-statistics: true

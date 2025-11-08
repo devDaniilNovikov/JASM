@@ -46,7 +46,7 @@ public class CardController {
     @SwaggerCardAnnotation(operation = "Добавление карты для аккаунта")
     @PostMapping(value = ADD_CARD,produces = MediaType.APPLICATION_JSON_VALUE)
     public void addCard(@RequestBody CardRequest cardRequest,
-                        @RequestParam Long userId){
+                        @RequestParam(required = false) Long userId){
         cardService.addCard(cardRequest,userId);
     }
 

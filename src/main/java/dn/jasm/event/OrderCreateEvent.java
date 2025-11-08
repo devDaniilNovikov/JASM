@@ -1,5 +1,7 @@
 package dn.jasm.event;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonMerge;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
@@ -18,7 +20,7 @@ public class OrderCreateEvent extends ApplicationEvent implements BaseEvent {
     private String status;
     private BigDecimal totalAmount;
     private Boolean isShipped;
-    private List<Long> itemsIds;
+    private List<String> itemNames;
 
     public OrderCreateEvent(Object source,
                             Long orderId,
@@ -26,14 +28,14 @@ public class OrderCreateEvent extends ApplicationEvent implements BaseEvent {
                             String status,
                             BigDecimal totalAmount,
                             Boolean isShipped,
-                            List<Long> itemsIds) {
+                            List<String> itemNames) {
         super(source);
         this.orderId = orderId;
         this.payedAt = payedAt;
         this.status = status;
         this.totalAmount = totalAmount;
         this.isShipped = isShipped;
-        this.itemsIds = new ArrayList<>(itemsIds.size());
+        this.itemNames = itemNames;
     }
 
 
@@ -45,6 +47,7 @@ public class OrderCreateEvent extends ApplicationEvent implements BaseEvent {
                 ", status='" + status + '\'' +
                 ", totalAmount=" + totalAmount +
                 ", isShipped=" + isShipped +
+                ", itemNames=" + itemNames +
                 '}';
     }
 

@@ -19,4 +19,14 @@ public class CardResponse {
     private Long expMonth;
     private Long expYear;
 
+    @Override
+    public String toString() {
+        return "CardResponse{" +
+                "id='" + id + '\'' +
+                ", cardNumber='" + cardNumber + '\'' +
+                ", cvc='" + cvc + '\'' +
+                ", expMonth=" + expMonth +
+                ", expYear=" + expYear +
+                '}';
+    }
 }

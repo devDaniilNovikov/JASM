@@ -1,6 +1,7 @@
 package dn.jasm.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import dn.jasm.entity.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,6 +28,7 @@ public class PaymentEntity {
             CascadeType.REFRESH
     })
     @JoinColumn(name = "payment_id")
+    @JsonBackReference("card-payments")
     private CardEntity card;
 
     private BigDecimal amount;

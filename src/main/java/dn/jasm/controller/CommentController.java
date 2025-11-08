@@ -42,10 +42,9 @@ public class CommentController {
 
     @PostMapping(ADD_COMMENT)
     @ResponseStatus(HttpStatus.OK)
-    public void addComment(@RequestBody CommentRequest commentRequest,
-                           @RequestParam Long userId) {
+    public void addComment(@RequestBody CommentRequest commentRequest) {
 
-        commentService.addComment(commentRequest,userId);
+        commentService.addComment(commentRequest);
     }
 
     @GetMapping(GET_COMMENTS_BY_USER)

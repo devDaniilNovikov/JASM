@@ -28,7 +28,7 @@ public class CommentEntity extends BasedEntity implements Serializable {
 
     @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
-    @JsonBackReference
+    @JsonBackReference("user-comments")
     private UserEntity user;
 
     @Override

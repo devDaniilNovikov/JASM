@@ -21,19 +21,19 @@ public class TransactionEntity extends BasedEntity{
 
     @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
-    @JsonBackReference
+    @JsonBackReference("user-transactions")
     private UserEntity user;
 
     @ManyToOne(cascade = {CascadeType.PERSIST,CascadeType.PERSIST,CascadeType.DETACH})
     @OnDelete(action = OnDeleteAction.CASCADE)
-    @JsonBackReference
+    @JsonBackReference("card-transactions")
     @JoinColumn(name = "card_id")
     private CardEntity card;
 
     @OneToOne
     @JoinColumn(name = "order_id")
     @OnDelete(action = OnDeleteAction.CASCADE)
-    @JsonBackReference("order-tx")
+    @JsonBackReference("order-transaction")
     private OrderEntity orderEntity;
 
     private Boolean completedAt;

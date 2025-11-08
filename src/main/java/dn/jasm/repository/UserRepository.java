@@ -1,5 +1,6 @@
 package dn.jasm.repository;
 import dn.jasm.entity.UserEntity;
+import dn.jasm.entity.enums.UserStatus;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,7 +14,7 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
-    @EntityGraph(attributePaths = {"orders,cards,comments"})
+
     Optional<UserEntity> findByUsername(String username);
 
     Optional<UserEntity> findByEmail(String email);
@@ -40,5 +41,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Modifying
     @Query(value = "UPDATE jasm.user SET balance = :value WHERE id = :id",nativeQuery = true)
     void updateBalanceOfUser(Long id, BigDecimal value);
+
+    long countByStatus(UserStatus userStatus);
 
 }

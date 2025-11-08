@@ -11,5 +11,6 @@ public class OrderRequest {
 
     private BigDecimal totalAmount;
     private BigDecimal discount;
+    private Long userId;
 
 }

@@ -71,7 +71,8 @@ public class PaymentServiceImpl implements PaymentService {
     private static final String PAYMENT_METHOD_TYPE = "card";
 
 
-    private static final String USD_CURRENCY = Currency.USD
+    private static final String USD_CURRENCY = Currency
+            .USD
             .getValue()
             .trim()
             .toLowerCase();
@@ -119,6 +120,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .setCancellationReason(PaymentIntentCancelParams
                     .CancellationReason.REQUESTED_BY_CUSTOMER)
                     .build();
+
             return paymentIntent.cancel(params);
         }catch (StripeException e){
             log.error("[Can't make payment: {}, error: {}]",paymentId,
@@ -179,7 +181,10 @@ public class PaymentServiceImpl implements PaymentService {
                 }
                 PaymentIntentCreateParams createParams = PaymentIntentCreateParams
                         .builder()
-                        .setAmount(Long.valueOf(String.valueOf(amount)))
+                        .setAmount(Long.valueOf(
+                                String.valueOf(
+                                        amount)
+                        ))
                         .setCurrency(USD_CURRENCY)
                         .setCustomer(userRequest.getUsername())
                         .setReceiptEmail(userRequest.getEmail())

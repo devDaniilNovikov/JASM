@@ -18,7 +18,8 @@ public interface OrderService {
 
     BigDecimal calculateTotalAmountOfOrder(List<ItemEntity> items);
 
-    void completeOrder(Long orderId,Long userId);
+    ListOrderResponse findAll(int pageSize,int pageNumber);
+
 
     void cancelOrder(Long orderId,Long userId);
 

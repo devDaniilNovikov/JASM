@@ -36,7 +36,7 @@ public class UserEntity extends BasedEntity {
     private String phoneNumber;
 
     @OneToMany(cascade = CascadeType.ALL,fetch = FetchType.LAZY,orphanRemoval = true,mappedBy = "user")
-    @JsonManagedReference
+    @JsonManagedReference("user-transactions")
     @BatchSize(size = BATCH_SIZE)
     private List<TransactionEntity> transactionEntity = new ArrayList<>();
 
@@ -45,13 +45,13 @@ public class UserEntity extends BasedEntity {
     @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
     @ToString.Exclude
     @BatchSize(size = BATCH_SIZE)
-    @JsonManagedReference
+    @JsonManagedReference("user-orders")
     private List<OrderEntity> orders = new ArrayList<>();
 
     @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
     @ToString.Exclude
     @BatchSize(size = BATCH_SIZE)
-    @JsonManagedReference
+    @JsonManagedReference("user-cards")
     private List<CardEntity> cards = new ArrayList<>();
 
     private Integer countOfDeals;
@@ -59,10 +59,11 @@ public class UserEntity extends BasedEntity {
     @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,orphanRemoval = true, cascade = CascadeType.ALL)
     @ToString.Exclude
     @BatchSize(size = BATCH_SIZE)
-    @JsonManagedReference
+    @JsonManagedReference("user-comments")
     private List<CommentEntity> comments = new ArrayList<>();
 
     @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
+    @JsonManagedReference("user-notifications")
     private List<NotificationEntity> notifications = new ArrayList<>();
 
 

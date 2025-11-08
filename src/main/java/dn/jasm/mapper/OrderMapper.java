@@ -35,19 +35,6 @@ public class OrderMapper {
         return order;
     }
 
-    public OrderEntity mapToEntityFromResponse(OrderResponse orderResponse){
-        OrderEntity order = new OrderEntity();
-        order.setId(orderResponse.getId());
-        order.setAmount(orderResponse.getTotalAmount());
-        order.setUser(userRepository.findById(orderResponse.getId())
-                .orElseThrow(UserNotFoundException::new));
-        var orderItems = itemMapper.mapToEntityList(orderResponse.getItems());
-        order.setItems(orderItems);
-        order.setQuantityOfItems(orderResponse.getQuantity());
-        order.setPayedAt(orderResponse.getIsPayed());
-        order.setIsShipped(orderResponse.getIsShipped());
-        return order;
-    }
 
     public OrderResponse mapToDto(OrderEntity order){
         return OrderResponse.builder()
@@ -57,10 +44,13 @@ public class OrderMapper {
                         .stream()
                         .toList()
                         .size())
-                .userId(order.getUser().getId())
+                .userId(order.getUser() != null ? order.getUser().getId() : null)
                 .totalAmount(order.getAmount())
                 .isPayed(true)
-                .items(itemMapper.mapToDtoList(order.getItems()))
+                .itemsNames(order.getItems()
+                        .stream()
+                        .map(ItemEntity::getName)
+                        .toList())
                 .build();
     }
 
@@ -69,6 +59,7 @@ public class OrderMapper {
         listOrderResponse.setOrders(orders.stream()
                 .filter(Objects::nonNull)
                 .filter(OrderEntity::getPayedAt)
+                .filter(order -> order.getItems()!=null)
                 .map(this::mapToDto)
                 .toList());
         return listOrderResponse;

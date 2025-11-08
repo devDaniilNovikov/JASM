@@ -12,6 +12,7 @@ import lombok.*;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -23,6 +24,8 @@ import java.util.Set;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserResponse implements Serializable{
 
     @Serial
@@ -42,9 +45,9 @@ public class UserResponse implements Serializable{
     @JsonProperty(value = "почта пользователя")
     private String email;
     @JsonFormat(shape = JsonFormat.Shape.STRING,pattern = "yyyy-MM-dd")
-    private LocalDateTime createdAt;
+    private LocalDate createdAt;
     @JsonFormat(shape = JsonFormat.Shape.STRING,pattern = "yyyy-MM-dd")
-    private LocalDateTime updatedAt;
+    private LocalDate updatedAt;
     @JsonProperty(value = "количество покупок")
     private Integer countOfDeals;
     private List<OrderEntity> orders;

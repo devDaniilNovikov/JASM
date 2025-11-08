@@ -1,6 +1,7 @@
 package dn.jasm.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
@@ -22,6 +23,7 @@ public class CategoryEntity extends BasedEntity {
     private String name;
 
     @OneToMany(mappedBy = "category")
+    @JsonManagedReference("items-categories")
     private List<ItemEntity> items = new ArrayList<>();
 
 
