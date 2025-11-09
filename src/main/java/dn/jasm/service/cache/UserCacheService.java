@@ -17,4 +17,6 @@ public interface UserCacheService {
 
     void putValuesToCache(List<String> keys,
                           List<Object> values);
+
+    void deleteFromCache(String id);
 }

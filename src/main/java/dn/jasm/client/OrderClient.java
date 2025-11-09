@@ -20,21 +20,26 @@ import java.util.List;
 @HttpExchange("http://localhost:3000/api/v1/orders")
 public interface OrderClient {
 
-    @PostExchange("/process")
+    String PROCESSING = "/process";
+    String GET_ORDER_LIST = "/list";
+    String GET_ORDER_LIST_OF_USER =  "/list/user";
+    String GET_ORDER_BY_ID = "/order/{id}";
+
+    @PostExchange(PROCESSING)
     @Retryable(maxAttempts = 4)
     void processOrder(@RequestParam List<Long> ids,
                       @RequestBody ItemRequest itemRequest);
 
-    @GetExchange("/list")
+    @GetExchange(GET_ORDER_LIST)
     @Retryable(maxAttempts = 5)
     ListOrderResponse findAll(@RequestParam(defaultValue = "10") int pageSize,
                               @RequestParam(defaultValue = "0") int pageNumber);
 
-    @GetExchange()
+    @GetExchange(GET_ORDER_LIST_OF_USER)
     @Retryable(maxAttempts = 5)
     OrderMapResponse getOrderListOfUser(@RequestParam Long userId);
 
-    @GetExchange("/{id}")
+    @GetExchange(GET_ORDER_BY_ID)
     @Retryable(maxAttempts = 5)
     OrderResponse getOrderById(@PathVariable Long id);
 

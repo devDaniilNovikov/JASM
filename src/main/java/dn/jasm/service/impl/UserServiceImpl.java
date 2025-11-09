@@ -265,11 +265,9 @@ public class UserServiceImpl implements UserService {
                         log.info("Updated user from db: {}", user.getUsername());
                         return user;
                     })
-                    .orElseThrow(()->{
-                        throw new UserNotFoundException(
-                                MessageFormat.format("User with id: {} not found",id)
-                        );
-                    });
+                    .orElseThrow(()-> new UserNotFoundException(
+                            MessageFormat.format("User with id: {0} not found", id)
+                    ));
             return userMapper.mapToDto(userEntity);
         }
 
@@ -303,7 +301,7 @@ public class UserServiceImpl implements UserService {
         requireUser.setBanTime(LocalDateTime.now());
         userRepository.save(requireUser);
         var cacheKey = requireUser.getId().toString();
-        redisService.deleteCacheByKey(cacheKey);
+        userCacheService.deleteFromCache(cacheKey);
         log.info("[Banned user is: {}]",requireUser.getUsername());
     }
 

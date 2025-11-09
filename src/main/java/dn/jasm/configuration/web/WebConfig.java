@@ -10,6 +10,7 @@ import jakarta.servlet.annotation.WebListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.actuate.autoconfigure.web.exchanges.HttpExchangesProperties;
+import org.springframework.boot.autoconfigure.web.client.RestClientBuilderConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
@@ -54,5 +55,7 @@ public class WebConfig {
                     event.getClientAddress());
         }
     }
+
+
 
 }

@@ -6,12 +6,14 @@ import dn.jasm.dto.order.OrderMapResponse;
 import dn.jasm.dto.order.OrderRequest;
 import dn.jasm.dto.order.OrderResponse;
 import dn.jasm.service.OrderService;
+import dn.jasm.service.cache.OrderCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequiredArgsConstructor
@@ -21,9 +23,11 @@ public class OrderController {
     private static final String PROCESS_ORDER = "/api/v1/orders/process";
     private static final String GET_ORDER_BY_ID = "/api/v1/orders/{id}";
     private static final String GET_ORDERS_LIST = "/api/v1/orders/list";
+    private static final String DELETE_ORDER_CACHES = "/api/v1/orders/cache/delete";
 
 
     private final OrderService orderService;
+    private final OrderCacheService orderCacheService;
 
     @GetMapping(GET_ORDER_LIST)
     @ResponseStatus(HttpStatus.OK)
@@ -50,6 +54,11 @@ public class OrderController {
     @ResponseStatus(HttpStatus.OK)
     public OrderResponse getOrderById(@PathVariable Long id){
         return orderService.getOrderById(id);
+    }
+
+    @DeleteMapping(DELETE_ORDER_CACHES)
+    public void deleteCachesByKeys(@RequestParam Set<String> ids){
+        orderCacheService.deleteFromCache(ids);
     }
 
 

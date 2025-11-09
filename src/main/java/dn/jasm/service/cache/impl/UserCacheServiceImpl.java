@@ -1,11 +1,11 @@
-package dn.jasm.service.cache;
+package dn.jasm.service.cache.impl;
 
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
+import dn.jasm.service.cache.UserCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +21,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserCacheServiceImpl implements UserCacheService {
+public class UserCacheServiceImpl implements UserCacheService  {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectsMapper;
@@ -86,7 +86,8 @@ public class UserCacheServiceImpl implements UserCacheService {
 
     @Override
     @Transactional
-    public void putValuesToCache(List<String> keys, List<Object> values) {
+    public void putValuesToCache(List<String> keys,
+                                 List<Object> values) {
         Map<String,Object> map = new HashMap<>();
         for (int i = 0; i<keys.size();i++){
             String key = CacheNames.USER_CACHE.getValue()+keys;
@@ -94,5 +95,15 @@ public class UserCacheServiceImpl implements UserCacheService {
             log.info("Map with cacheValues is: {}",map);
         }
         redisTemplate.opsForValue().multiSet(map);
+    }
+
+    @Override
+    public void deleteFromCache(String id) {
+        String key = CacheNames.USER_CACHE.getValue()+id;
+        var elementForDelete = redisTemplate.opsForValue().get(key);
+        if (elementForDelete!=null){
+            log.info("[Deleted element: {}]",elementForDelete);
+            redisTemplate.delete(id);
+        }
     }
 }

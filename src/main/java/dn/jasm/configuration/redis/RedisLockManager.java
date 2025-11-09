@@ -19,8 +19,7 @@ public class RedisLockManager {
 
     private final RedisTemplate<String,Object> redisTemplate;
 
-    @Value("${spring.data.redis.script}")
-    private String script;
+    private final String script = "HI";
 
 
 

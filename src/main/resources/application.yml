@@ -13,20 +13,23 @@ server:
   tomcat:
     resource:
       allow-caching: true
-  port: 3000
+  port: ${SERVER_PORT}
   servlet:
     encoding:
       charset: UTF-8
+  shutdown: graceful
 
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    username: daniilnovikov
-    password: demo2228
-    url: jdbc:postgresql://localhost:5432/postgres
+    username: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PASSWORD}
+    url: ${POSTGRES_URL}
   web:
     resources:
       static-locations: classpath:/static/
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
   #  elasticsearch:
 #    uris: ${ELASTIC_URI}
 #    username: ${ELASTIC_USERNAME}
@@ -46,13 +49,13 @@ spring:
   aop:
     auto: true
   rabbitmq:
-      host: localhost
-      port: 5672
+      host: ${RABBIT_HOST}
+      port: ${RABBIT_PORT}
       listener:
         direct:
-          acknowledge-mode: manual
-      password: guest
-      username: guest
+          acknowledge-mode: ${RABBIT_ACK_MODE}
+      password: ${RABBIT_PASSWORD}
+      username: ${RABBIT_USERNAME}
 
 
 
@@ -77,15 +80,15 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
-      script:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+
 
 
   cache:
     type: redis
     redis:
-      time-to-live: 5m
+      time-to-live: ${REDIS_TTL}
       cache-null-values: false
       use-key-prefix: true
       enable-statistics: true
@@ -108,10 +111,10 @@ spring:
     execution:
       shutdown:
         await-termination: true
-      thread-name-prefix: jassm-jobs
+      thread-name-prefix: ${THREAD_NAME_PREFIX}
 
   jackson:
-    date-format: java.text.SimpleDateFormat
+    date-format: ${JACKSON_DATE_FORMAT}
   mvc:
     async:
       request-timeout: 5
@@ -121,46 +124,46 @@ spring:
 
 logging:
   level:
-    web: info
-    sql: info
-    root: info
+    web: ${LOGGING_WEB_TYPE}
+    sql: ${LOGGING_SQL_TYPE}
+    root: ${LOGGING_ROOT_TYPE}
   pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: ${LOGGING_PATTERN}
 stripe:
   secret:
-    api-key: asdfr90q23wera0-d-ase0dr-23q4ew9
+    api-key: ${STRIPE_API_KEY}
   account:
-    key: asdfr90q23wera0-d-ase0dr-23q4ew900
+    key: ${STRIPE_ACCOUNT_KEY}
 springdoc:
   swagger-ui:
-    path: /swagger-ui.html
+    path: ${SWAGGER_PATH}
 open-api:
   contact:
-    name: dnNvk
-    email: ololorash2001@mail.ru
+    name: ${SWAGGER_OPEN_API_CONTACT_NAME}
+    email: ${SWAGGER_OPEN_API_CONTACT_EMAIL}
   info:
-    title: Jassm
-    version: 1
-    description: DarkNet-Marketplace
+    title: ${SWAGGER_OPEN_API_INFO_TITLE}
+    version: ${SWAGGER_OPEN_API_INFO_VERSION}
+    description: ${SWAGGER_OPEN_API_CONTACT_DESCRIPTION}
   server:
-    description: Welcome to the club, Boddy
+    description: ${SWAGGER_OPEN_API_SERVER_DESCRIPTION}
 
 order:
   discount:
-    value: 10
+    value: ${ORDER_DISCOUNT_VALUE}
   limit:
-    value: 5
+    value: ${ORDER_LIMIT_VALUE}
 rabbitMq:
-  queueName: Jassm
-  topicExchangeName: Jassm-Topic-Exchange
-  routingKey: 4389wr8430-w49320
-  directExchange: Jassm-Direct-Exchange
-  ttl: 60
-  headerName: rabbit-header
+  queueName: ${ORDER_LIMIT_VALUE}
+  topicExchangeName: ${RABBIT_TOPIC_EXCHANGE_NAME}
+  routingKey: ${RABBIT_ROUTING_KEY}
+  directExchange: ${RABBIT_DIRECTEXCHANGE}
+  ttl: ${RABBIT_QUEUE_TTL}
+  headerName: ${RABBIT_HEADER_NAME}
 s3:
-  region: RU
-  accessKey: 1320920-423-0qw4
-  secretKey: -304-3204230430953095
+  region: ${S3_REGION}
+  accessKey: ${S3_ACCESSKEY}
+  secretKey: ${S3_SECRET_KEY}
 
 
 
