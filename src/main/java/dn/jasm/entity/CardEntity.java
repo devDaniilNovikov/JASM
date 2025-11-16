@@ -51,6 +51,8 @@ public class CardEntity extends BasedEntity {
     private Set<TransactionEntity> transactions = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "card_type")
+
     private CardType cardType;
 
     private Integer transactionsCount;

@@ -19,7 +19,8 @@ public interface CardRepository extends JpaRepository<CardEntity,Long> {
     List<CardEntity> findByUserId(Long userId);
 
     @Query(value = "SELECT c FROM CardEntity c WHERE c.user.id = :userId")
-    Page<CardEntity> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
+    Page<CardEntity> findAllByUserId(@Param("userId") Long userId,
+                                     Pageable pageable);
 
 
     CardEntity findByPaymentEntity_Id(String paymentEntityId);

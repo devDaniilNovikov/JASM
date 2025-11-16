@@ -28,10 +28,12 @@ public class OrderMapper {
 
     public OrderEntity mapToEntity(OrderRequest orderRequest,List<Long> itemsIds){
         OrderEntity order = new OrderEntity();
+        order.setId(order.getId());
         order.setAmount(orderRequest.getTotalAmount());
-        var items = itemRepository.findAllByIdIn(itemsIds);
+        var items = itemRepository.findAllById(itemsIds);
         order.setItems(items);
         order.setDiscount(orderRequest.getDiscount());
+        order.setQuantityOfItems(orderRequest.getQuantity());
         return order;
     }
 

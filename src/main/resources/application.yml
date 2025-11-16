@@ -30,10 +30,9 @@ spring:
       static-locations: classpath:/static/
   lifecycle:
     timeout-per-shutdown-phase: 20s
-  #  elasticsearch:
-#    uris: ${ELASTIC_URI}
-#    username: ${ELASTIC_USERNAME}
-#    password: ${ELASTIC_PASSWORD}
+  output:
+    ansi:
+      enabled: always
   config:
     import: optional:file:.env[.properties]
   jpa:
@@ -48,18 +47,29 @@ spring:
         format_sql: true
   aop:
     auto: true
-  rabbitmq:
-      host: ${RABBIT_HOST}
-      port: ${RABBIT_PORT}
+  spring:
+    kafka:
+      bootstrap-servers: localhost:9092
+      producer:
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+        acks: all
+        retries: 3
+      consumer:
+        group-id: jasm-consumer-group
+        auto-offset-reset: earliest
+        enable-auto-commit: false
+        key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+        properties:
+          spring.json.trusted.packages: "dn.jasm.*"
       listener:
-        direct:
-          acknowledge-mode: ${RABBIT_ACK_MODE}
-      password: ${RABBIT_PASSWORD}
-      username: ${RABBIT_USERNAME}
+        ack-mode: manual
 
 
 
-#  mail:
+
+  #  mail:
 #   host: ${MAIL_HOST}
 #   port: ${MAIL_PORT}
 #   username: ${MAIL_USERNAME}
@@ -76,19 +86,21 @@ spring:
   batch:
     job:
       enabled: true
+  devtools:
+    add-properties: true
 
 
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
+      host: localhost
+      port: 6379
 
 
 
   cache:
     type: redis
     redis:
-      time-to-live: ${REDIS_TTL}
+      time-to-live: 5
       cache-null-values: false
       use-key-prefix: true
       enable-statistics: true
@@ -121,14 +133,17 @@ spring:
   servlet:
     multipart:
       enabled: true
+  kafka:
+    template:
+      default-topic: "jasm-topic"
 
 logging:
   level:
-    web: ${LOGGING_WEB_TYPE}
-    sql: ${LOGGING_SQL_TYPE}
-    root: ${LOGGING_ROOT_TYPE}
+    web: info
+    sql: info
+    root: info
   pattern:
-    console: ${LOGGING_PATTERN}
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 stripe:
   secret:
     api-key: ${STRIPE_API_KEY}
@@ -154,16 +169,21 @@ order:
   limit:
     value: ${ORDER_LIMIT_VALUE}
 rabbitMq:
-  queueName: ${ORDER_LIMIT_VALUE}
-  topicExchangeName: ${RABBIT_TOPIC_EXCHANGE_NAME}
-  routingKey: ${RABBIT_ROUTING_KEY}
-  directExchange: ${RABBIT_DIRECTEXCHANGE}
-  ttl: ${RABBIT_QUEUE_TTL}
-  headerName: ${RABBIT_HEADER_NAME}
+
+
+
+
+
+
 s3:
   region: ${S3_REGION}
   accessKey: ${S3_ACCESSKEY}
   secretKey: ${S3_SECRET_KEY}
+
+
+transactions:
+  delay:
+    value: 10
 
 
 

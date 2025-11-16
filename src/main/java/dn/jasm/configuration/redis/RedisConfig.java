@@ -40,6 +40,7 @@ public class RedisConfig {
         objectMapper.registerModule(new JavaTimeModule());
         redisTemplate.setValueSerializer(serializer);
         redisTemplate.setEnableTransactionSupport(true);
+
         redisTemplate.afterPropertiesSet();
         return redisTemplate;
     }

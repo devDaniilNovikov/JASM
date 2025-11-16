@@ -14,14 +14,14 @@ import java.util.*;
 
 public interface OrderService {
 
-    OrderResponse createOrder(Price price, List<ItemEntity> items);
 
     BigDecimal calculateTotalAmountOfOrder(List<ItemEntity> items);
 
-    ListOrderResponse findAll(int pageSize,int pageNumber);
+    ListOrderResponse findAll(int pageSize,
+                              int pageNumber);
 
-
-    void cancelOrder(Long orderId,Long userId);
+    void cancelOrder(Long orderId,
+                     Long userId);
 
     Double calculateRatingOfItem(List<ItemEntity> items);
 
@@ -31,9 +31,10 @@ public interface OrderService {
 
     ListOrderResponse findAllByIds(List<Long> ids);
 
-    void processOrder(OrderRequest orderRequest,List<Long> itemsIds);
+    void processOrder(OrderRequest orderRequest,
+                      List<Long> itemsIds);
 
-    void handleOrderCreateEvent(OrderCreateEvent orderCreateEvent);
+    void handleOrderCreateEvent(OrderEntity order);
 
 
 

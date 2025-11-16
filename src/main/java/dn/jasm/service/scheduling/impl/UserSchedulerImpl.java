@@ -2,12 +2,10 @@ package dn.jasm.service.scheduling.impl;
 import dn.jasm.entity.UserEntity;
 import dn.jasm.repository.UserRepository;
 import dn.jasm.entity.enums.UserStatus;
-import dn.jasm.service.RabbitService;
 import dn.jasm.service.UserService;
 import dn.jasm.service.scheduling.UserScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,9 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Service

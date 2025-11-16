@@ -17,7 +17,6 @@ import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.CardMapper;
 import dn.jasm.mapper.UserMapper;
 import dn.jasm.repository.*;
-import dn.jasm.service.RabbitService;
 import dn.jasm.service.RedisService;
 import dn.jasm.entity.enums.UserStatus;
 import dn.jasm.event.user.UserUpdateEvent;
@@ -62,7 +61,6 @@ public class UserServiceImpl implements UserService {
     private final ApplicationEventPublisher eventPublisher;
     private final RedisService redisService;
     private final RedisTemplate<String,Object> redisTemplate;
-    private final RabbitService rabbitService;
     private final RedisLockManager redisLockManager;
     private final ThreadFactory threadFactory;
     private final UserCacheService userCacheService;
@@ -657,7 +655,6 @@ public class UserServiceImpl implements UserService {
     @EventListener
     public void handleUserEvent(UserCreateEvent userCreateEvent){
         log.info("Handle event: {}",userCreateEvent);
-        rabbitService.completeAsync(userCreateEvent);
     }
 
 }

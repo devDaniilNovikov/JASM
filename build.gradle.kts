@@ -64,7 +64,6 @@ dependencies {
     implementation("org.springframework.integration:spring-integration-amqp")
     implementation("org.springframework.session:spring-session-data-redis")
     testImplementation("org.springframework.amqp:spring-rabbit-test")
-    developmentOnly ("org.springframework.boot:spring-boot-devtools")
     runtimeOnly("org.postgresql:postgresql:42.7.7")
     compileOnly ("org.projectlombok:lombok:1.18.32")
     annotationProcessor ("org.projectlombok:lombok:1.18.32")

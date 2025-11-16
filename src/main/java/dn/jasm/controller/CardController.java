@@ -20,8 +20,16 @@ public class CardController {
     private static final String GET_COUNT_OF_CARDS_OF_USER = "/api/v1/cards/{userId}/count";
     private static final String GET_CARDS_OF_USER = "/api/v1/cards/{userId}";
     private static final String GET_CARD_BY_ID = "/api/v1/cards/{cardId}";
+    private static final String DELETE_CARD_FROM_USER = "/api/v1/cards/{cardId}/delete";
 
     private final CardService cardService;
+
+    @DeleteMapping(DELETE_CARD_FROM_USER)
+    public void deleteCard(@RequestParam Long userId,
+                           @PathVariable Long cardId){
+        cardService.deleteCardFromUser(userId, cardId);
+
+    }
 
     @GetMapping(GET_CARDS_OF_USER)
     @SwaggerCardAnnotation(operation = "Получение карт пользователя по его уникальному идентификатору ")

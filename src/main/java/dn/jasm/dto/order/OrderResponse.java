@@ -5,20 +5,18 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import dn.jasm.dto.item.ItemRequest;
 import dn.jasm.dto.item.ItemResponse;
 import dn.jasm.entity.ItemEntity;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.*;
 
-@Data
-@Builder
+@Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Getter
+@Setter
 public class OrderResponse {
 
     private Long id;
@@ -28,4 +26,16 @@ public class OrderResponse {
     private Integer quantity;
     private Boolean isPayed;
     private Boolean isShipped;
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        OrderResponse that = (OrderResponse) o;
+        return id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
 }

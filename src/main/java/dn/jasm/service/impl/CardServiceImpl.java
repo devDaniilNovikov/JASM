@@ -3,6 +3,7 @@ package dn.jasm.service.impl;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.card.CardMapResponse;
 import dn.jasm.dto.card.CardResponse;
+import dn.jasm.entity.enums.CardType;
 import dn.jasm.service.RedisService;
 import dn.jasm.dto.card.CardRequest;
 import dn.jasm.dto.card.ListCardResponse;
@@ -54,7 +55,7 @@ public class CardServiceImpl implements CardService {
         card.setCvc(cardRequest.getCvc());
         card.setExpMonth(cardRequest.getExpMonth());
         card.setExpYear(cardRequest.getExpYear());
-        card.setCardType(cardRequest.getCardType());
+//        card.setCardType(CardType.CREDIT.getValue());
         var userCards = user.getCards();
         userCards.add(card);
         cardRepository.save(card);
@@ -89,7 +90,8 @@ public class CardServiceImpl implements CardService {
 
     @Transactional
     @Override
-    public void deleteCardFromUser(Long userId,Long cardId) {
+    public void deleteCardFromUser(Long userId,
+                                   Long cardId) {
         var user = userRepository.findById(userId)
                 .orElseThrow(RuntimeException::new);
         var card = cardRepository.findById(cardId)

@@ -1,5 +1,6 @@
 package dn.jasm.service.cache;
 
+import dn.jasm.dto.order.ListOrderResponse;
 import dn.jasm.dto.order.OrderResponse;
 import org.springframework.web.service.annotation.HttpExchange;
 
@@ -12,6 +13,8 @@ public interface OrderCacheService {
                     Object value);
 
     OrderResponse getOrderFromCache(String id);
+
+    ListOrderResponse getOrderListFromCache(Set<String> ids);
 
     void deleteFromCache(String id);
 

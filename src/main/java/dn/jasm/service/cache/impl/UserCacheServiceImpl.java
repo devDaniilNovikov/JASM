@@ -5,18 +5,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
+import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.service.cache.UserCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.connection.RedisCommandsProvider;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,7 +51,6 @@ public class UserCacheServiceImpl implements UserCacheService  {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public UserResponseList getValuesFromCache(Set<String> strings) {
         List<String> keys = strings.stream()
                 .filter(Objects::nonNull)
@@ -98,7 +102,11 @@ public class UserCacheServiceImpl implements UserCacheService  {
     }
 
     @Override
+    @Transactional
     public void deleteFromCache(String id) {
+        if (id==null || id.isEmpty()){
+            throw new IllegalArgumentException("Key for cache can't be null or empty");
+        }
         String key = CacheNames.USER_CACHE.getValue()+id;
         var elementForDelete = redisTemplate.opsForValue().get(key);
         if (elementForDelete!=null){
@@ -106,4 +114,25 @@ public class UserCacheServiceImpl implements UserCacheService  {
             redisTemplate.delete(id);
         }
     }
+
+    @Override
+    @Transactional
+    public void deleteFromCache(Set<String> ids) {
+        if (ids==null || ids.isEmpty()){
+            throw new IllegalArgumentException("Keys for cache can't be null or empty");
+        }
+        Set<String> keys = ids.stream()
+                .filter(Objects::nonNull)
+                .map(key->CacheNames.USER_CACHE.getValue()+key)
+                .collect(Collectors.toSet());
+        Optional.ofNullable(redisTemplate.opsForValue()
+                .multiGet(keys))
+                .ifPresentOrElse(key->redisTemplate.delete(keys),
+                        ()->{
+                    throw new UserNotFoundException(
+                            MessageFormat.format("Users cache keys not found: {0}",keys));
+                        });
+    }
+
+
 }

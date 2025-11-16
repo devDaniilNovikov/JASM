@@ -21,6 +21,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.context.support.ServletRequestHandledEvent;
 import software.amazon.awssdk.core.interceptor.InterceptorContext;
 
+import java.util.concurrent.ThreadPoolExecutor;
+
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
@@ -41,6 +43,7 @@ public class WebConfig {
         objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
         objectMapper.disable(DeserializationFeature.EAGER_DESERIALIZER_FETCH,
                 DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY);
+        objectMapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return objectMapper;
     }
 
@@ -55,6 +58,7 @@ public class WebConfig {
                     event.getClientAddress());
         }
     }
+
 
 
 

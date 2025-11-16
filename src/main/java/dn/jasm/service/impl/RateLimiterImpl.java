@@ -1,17 +1,13 @@
 package dn.jasm.service.impl;
-
-import dn.jasm.dto.user.UserResponse;
 import dn.jasm.service.RateLimiterService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -59,10 +55,12 @@ public class RateLimiterImpl implements RateLimiterService {
                                         HttpServletResponse response,
                                         FilterChain filterChain) throws ServletException, IOException {
             String client = Optional.ofNullable(request.getHeader(CLIENT_HEADER))
-                    .filter(s->!s.isBlank())
-                    .orElseGet(()->Optional.ofNullable(request.getRemoteAddr())
+                            .filter(s->!s.isBlank())
+                            .orElseGet(()->Optional.ofNullable(request.getRemoteAddr())
                             .orElse(UNKNOWN_CLIENT));
-            boolean allowed = rateLimiterService.allowRequest(client, LIMIT_VALUE, Duration.ofMinutes(1));
+            boolean allowed = rateLimiterService.allowRequest(client,
+                    LIMIT_VALUE,
+                    Duration.ofMinutes(1));
             if (!allowed){
                 response.setStatus(429);
                 response.getWriter().println(ERROR_MESSAGE);
