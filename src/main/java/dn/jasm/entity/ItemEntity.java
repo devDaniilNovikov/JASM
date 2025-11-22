@@ -75,7 +75,6 @@ public class ItemEntity extends BasedEntity {
     @Override
     public String toString() {
         return "ItemEntity{" +
-                "order=" + order +
                 ", name='" + name + '\'' +
                 ", photoUrls=" + photoUrls +
                 ", price=" + price +

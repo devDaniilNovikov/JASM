@@ -1,6 +1,8 @@
 package dn.jasm.repository;
 
 import dn.jasm.entity.OrderEntity;
+import dn.jasm.entity.enums.OrderStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -13,5 +15,7 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
     Optional<OrderEntity> findByUserId(Long userId);
 
     List<OrderEntity> findAllByUserId(Long userId);
+
+    List<OrderEntity> findAllByOrderStatus(OrderStatus orderStatus, Pageable pageable);
 
 }

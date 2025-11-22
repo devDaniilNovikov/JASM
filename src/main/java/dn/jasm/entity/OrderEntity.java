@@ -77,7 +77,6 @@ public class OrderEntity extends BasedEntity {
                 ", payedAt=" + payedAt +
                 ", rating=" + rating +
                 ", items=" + items +
-                ", transactionEntity=" + transactionEntity +
                 '}';
     }
 

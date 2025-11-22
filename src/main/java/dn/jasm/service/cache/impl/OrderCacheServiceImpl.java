@@ -33,6 +33,7 @@ public class OrderCacheServiceImpl implements OrderCacheService   {
 
     private final RedisTemplate<String,Object> redisTemplate;
     private final ObjectMapper orderObjectMapper;
+    private final OrderMapper orderMapper;
 
 
 
@@ -123,5 +124,6 @@ public class OrderCacheServiceImpl implements OrderCacheService   {
                                             "Order cache with ids: {0} not found",ids));
                         });
     }
+
 
 }

@@ -7,7 +7,9 @@ import dn.jasm.dto.order.OrderRequest;
 import dn.jasm.dto.order.OrderResponse;
 import dn.jasm.entity.ItemEntity;
 import dn.jasm.entity.OrderEntity;
+import dn.jasm.entity.enums.OrderStatus;
 import dn.jasm.event.OrderCreateEvent;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -34,7 +36,13 @@ public interface OrderService {
     void processOrder(OrderRequest orderRequest,
                       List<Long> itemsIds);
 
-    void handleOrderCreateEvent(OrderEntity order);
+    void handleOrderCreateEvent(OrderCreateEvent order );
+
+    ListOrderResponse findAllByStatus(
+            OrderStatus status,
+            int pageNumber,
+            int pageSize
+    );
 
 
 

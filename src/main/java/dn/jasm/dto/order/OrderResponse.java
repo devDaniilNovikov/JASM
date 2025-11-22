@@ -6,7 +6,9 @@ import dn.jasm.dto.item.ItemRequest;
 import dn.jasm.dto.item.ItemResponse;
 import dn.jasm.entity.ItemEntity;
 import lombok.*;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -17,13 +19,15 @@ import java.util.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
 @Setter
-public class OrderResponse {
+@ToString
+public class OrderResponse implements Serializable {
 
     private Long id;
     private BigDecimal totalAmount;
     private Long userId;
     private List<String> itemsNames;
     private Integer quantity;
+    private String status;
     private Boolean isPayed;
     private Boolean isShipped;
 

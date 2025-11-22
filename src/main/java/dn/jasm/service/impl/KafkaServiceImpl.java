@@ -52,8 +52,6 @@ public class KafkaServiceImpl implements KafkaService {
                         log.error("Error in future: {}",e.getMessage());
                         throw new RuntimeException(e);
                     }},executorService);
-        log.info("Futures is completed: {}, {}",
-                kafkaFuture,redisFuture);
 
     }
 }

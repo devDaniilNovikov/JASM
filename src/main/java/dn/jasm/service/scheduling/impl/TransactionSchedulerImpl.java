@@ -28,8 +28,7 @@ public class TransactionSchedulerImpl implements TransactionScheduler {
     private final TransactionRepository transactionRepository;
     private final CardRepository cardRepository;
 
-     @Value("${transactions.delay.value}")
-     private static final String delay = "10s";
+
 
 
     @Override

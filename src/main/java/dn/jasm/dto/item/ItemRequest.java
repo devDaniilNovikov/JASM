@@ -16,7 +16,7 @@ public class ItemRequest {
     private String name;
     private String description;
     private Boolean isShippable;
-    private int quantity;
+    private Integer quantity;
     private BigDecimal price;
 
 }

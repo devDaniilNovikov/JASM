@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -49,6 +50,7 @@ public class OrderMapper {
                 .userId(order.getUser() != null ? order.getUser().getId() : null)
                 .totalAmount(order.getAmount())
                 .isPayed(true)
+                .status(order.getOrderStatus().getValue())
                 .itemsNames(order.getItems()
                         .stream()
                         .map(ItemEntity::getName)
@@ -67,12 +69,36 @@ public class OrderMapper {
         return listOrderResponse;
     }
 
+    public ListOrderResponse map(List<OrderResponse> orders){
+        ListOrderResponse listOrderResponse = new ListOrderResponse();
+        listOrderResponse.setOrders(orders);
+        return listOrderResponse;
+    }
+
 
     public List<OrderResponse> mapToList(List<OrderEntity> orders){
         return orders.stream()
                 .filter(Objects::nonNull)
                 .map(this::mapToDto)
                 .toList();
+    }
+
+    public ListOrderResponse mapToListOrderResponse(List<OrderEntity> orderEntities){
+        ListOrderResponse listOrderResponse = new ListOrderResponse();
+        listOrderResponse.setOrders(orderEntities
+                .stream()
+                .map(this::mapToDto)
+                .toList());
+        return listOrderResponse;
+    }
+
+    public ListOrderResponse mapToListDto(OrderResponse orderResponse){
+        List<OrderResponse> responseList = new ArrayList<>();
+        responseList.add(orderResponse);
+        ListOrderResponse listOrderResponse = new ListOrderResponse();
+        listOrderResponse.setOrders(responseList);
+        return listOrderResponse;
+
     }
 
 

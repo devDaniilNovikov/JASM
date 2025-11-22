@@ -44,7 +44,7 @@ public class ShopServiceImpl implements ShopService {
                 .orElseThrow(RuntimeException::new);
     }
 
-    @EventListener
+//    @EventListener
     public void handleShopEvent(ShopEvent shopEvent){
         log.info("Created new shop, owner of shop: {}, shopId: {}, shopName: {}",shopEvent.getOwnerId(),
                 shopEvent.getShopId(),shopEvent.getShopName());

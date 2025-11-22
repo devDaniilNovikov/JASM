@@ -1,6 +1,7 @@
 package dn.jasm.service.impl;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.item.ItemRequest;
@@ -30,6 +31,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,7 @@ import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -61,10 +64,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final OrderCacheService orderCacheService;
     private final ObjectMapper orderObjectMapper;
-    private final RedisTemplate<String,Object> redisTemplate;
-    private final TransactionTemplate transactionTemplate;
     private final KafkaService kafkaService;
-    ExecutorService executorService = Executors.newFixedThreadPool(100);
+    private final RedisTemplate<String,Object> redisTemplate;
 
 
 
@@ -207,7 +208,7 @@ public class OrderServiceImpl implements OrderService {
             var items = itemMapper.mapToItemRequestList(itemRepository.findAllById(itemsIds));
             for (ItemRequest itemRequest: items){
                 BigDecimal itemQuantity = BigDecimal.valueOf(itemRequest.getQuantity());
-                totalAmount = totalAmount.add(itemRequest.getPrice().multiply(itemQuantity));
+                items.forEach(item->item.setQuantity(itemQuantity.intValue()));
                 log.info("[Total amount: {}]",totalAmount);
             }
 
@@ -218,19 +219,26 @@ public class OrderServiceImpl implements OrderService {
                 orderRequest.setDiscount(BigDecimal.ZERO);
             }
             orderRequest.setTotalAmount(totalAmount.subtract(orderRequest.getDiscount()));
-            var orderEntity = orderMapper.mapToEntity(orderRequest,itemsIds);
-            var user = userRepository.findById(orderRequest.getUserId())
+            OrderEntity orderEntity = orderMapper.mapToEntity(orderRequest,itemsIds);
+            UserEntity user = userRepository.findById(orderRequest.getUserId())
                     .orElseThrow(() -> new UserNotFoundException("[User not found]"));
             orderEntity.setUser(user);
             orderEntity.setOrderStatus(OrderStatus.PAID);
             orderEntity.setPayedAt(true);
             orderEntity.setIsShipped(items.stream()
                     .allMatch(ItemRequest::getIsShippable));
-            var items_ = new ArrayList<>(itemRepository.findAllById(itemsIds));
-            var itemsIdsList = items_.stream()
+            List<ItemEntity> items_ = new ArrayList<>(itemRepository.findAllById(itemsIds));
+            Set<String> itemsNamesList = items_.stream()
+                    .sorted(Comparator.comparing(ItemEntity::getName)
+                            .reversed())
                             .map(ItemEntity::getName)
-                            .toList();
-            log.info("Items name is: {}",itemsIdsList);
+                            .collect(Collectors.toSet());
+            BigDecimal itemPrice = items_.stream()
+                    .map(ItemEntity::getPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            log.info("[Total item price: {}]",itemPrice);
+            orderEntity.setAmount(itemPrice);
+            log.info("[Items name is: {}]",itemsNamesList);
             items_.forEach(itemEntity -> itemEntity.setOrder(orderEntity));
             orderEntity.setItems(items_);
             orderRepository.save(orderEntity);
@@ -243,17 +251,7 @@ public class OrderServiceImpl implements OrderService {
                     itemsIds,
                     orderRequest
             );
-            var orderDto = orderMapper.mapToDto(orderEntity);
-            var cacheKey = CacheNames.ORDER_CACHE
-                    .getValue()
-                    .concat(orderDto.getId()
-                            .toString());
-            kafkaService.sendMessage(orderDto, cacheKey);
-            log.info("[Item list is: {}]",itemList
-                    .stream()
-                    .map(ItemEntity::getName)
-                    .toList());
-                publishEvent(orderEntity);
+            publishEvent(orderEntity);
 
         }
 
@@ -292,19 +290,9 @@ public class OrderServiceImpl implements OrderService {
                             .thenComparing(ItemEntity::getPrice)
                             .thenComparing(ItemEntity::getQuantity));
             itemEntityTreeSet.addAll(forUpdate);
+            log.info("Item set is: {}",itemEntityTreeSet);
             return itemEntityTreeSet;
 
-        }
-
-        private BigDecimal calculateTotalAmount(List<Long> itemIds){
-            BigDecimal totalAmount = BigDecimal.valueOf(0);
-            var items = itemMapper.mapToItemRequestList(itemRepository.findAllById(itemIds));
-            for (ItemRequest item: items){
-                BigDecimal itemQuantity = BigDecimal.valueOf(item.getQuantity());
-                totalAmount = totalAmount.add(item.getPrice().multiply(itemQuantity));
-                log.info("[Total amount: {}]",totalAmount);
-            }
-            return totalAmount;
         }
 
 
@@ -313,25 +301,89 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @EventListener
-    public void handleOrderCreateEvent(OrderEntity order) {
-        var orderStringValue = new OrderCreateEvent(this,
-                order.getId(),
-                order.getPayedAt(),
-                order.getOrderStatus().name(),
-                order.getAmount(),
-                order.getIsShipped(),
-                order.getItems()
-                        .stream()
-                        .map(ItemEntity::getName)
-                        .toList());
-//        redisTemplate.opsForValue()
-//                        .setIfAbsent(
-//                                orderStringValue.getOrderId().toString(),
-//                                orderStringValue.toString(),
-//                                Duration.ofMinutes(10)
-//                        );
+    public void handleOrderCreateEvent(OrderCreateEvent order) {
+        var cacheKey = CacheNames.ORDER_CACHE
+                .getValue()
+                .concat(order.getOrderId()
+                        .toString());
+        var orderEntity = orderRepository.findById(order.getOrderId())
+                        .map(orderMapper::mapToDto)
+                        .orElseThrow(OrderNotFoundException::new);
+        kafkaService.sendMessage(orderEntity, cacheKey);
         log.info("[Created order event is: {}]",order);
     }
+
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public ListOrderResponse findAllByStatus(OrderStatus status,
+                                             int pageNumber,
+                                             int pageSize) {
+        Pageable pages = PageRequest.of(pageNumber, pageSize);
+        String cacheKey = String.format("%s:status:%s:page:%d:size:%d",
+                CacheNames.ORDER_CACHE.getValue(),
+                status.name(),
+                pageNumber,
+                pageSize);
+        Object cachedObject = redisTemplate.opsForValue().get(cacheKey);
+        if (cachedObject != null) {
+            log.info("Value was get from cache: {}", cachedObject);
+            return orderObjectMapper.convertValue(cachedObject, ListOrderResponse.class);
+        }
+        List<OrderResponse> orderResponses = orderRepository.findAllByOrderStatus(status, pages)
+                .stream()
+                .map(orderMapper::mapToDto)
+                .toList();
+        ListOrderResponse response = Optional.ofNullable(orderMapper.map(orderResponses))
+                .stream()
+                .peek(o->redisTemplate.opsForValue().setIfAbsent(cacheKey,o,Duration.ofMinutes(10)))
+                .findAny()
+                .orElseThrow();
+        log.info("Value was get from db and put to cache: {}", response);
+        return response;
+    }
+
+
+//    @Override
+//    @Transactional(readOnly = true)
+//    public ListOrderResponse findAllByStatus(OrderStatus status,
+//                                             int pageNumber,
+//                                             int pageSize) {
+//        Pageable pages = PageRequest.of(pageNumber, pageSize);
+//        String cacheKey = String.format("%s:status:%s:page:%d:size:%d",
+//                CacheNames.ORDER_CACHE.getValue(),
+//                status.name(),
+//                pageNumber,
+//                pageSize);
+//        if (redisTemplate.hasKey(cacheKey)){
+//            ListOrderResponse cachedValue = Optional.ofNullable(redisTemplate
+//                    .opsForValue()
+//                    .get(cacheKey))
+//                    .stream()
+//                    .map(order-> orderObjectMapper.convertValue(order,ListOrderResponse.class))
+//                    .filter(Objects::nonNull)
+//                    .findAny()
+//                    .orElseThrow(()->new OrderNotFoundException("Cached values of order list not found"));
+//            log.info("Value was get from cache: {}",cachedValue);
+//            return cachedValue;
+//        }
+//        List<OrderResponse> orderResponses =  orderRepository.findAllByOrderStatus(
+//                status,pages)
+//                .stream()
+//                .map(orderMapper::mapToDto)
+//                .toList();
+//        var response = Optional.ofNullable(orderMapper.map(orderResponses))
+//                .stream()
+//                .peek(res-> redisTemplate.opsForValue()
+//                        .setIfAbsent(cacheKey,res,Duration.ofMinutes(10))
+//                )
+//                .findAny()
+//                .orElseThrow(()->new OrderNotFoundException("Require order from db not found"));
+//        log.info("Value was get from db: {}",response.toString());
+//        return response;
+
+
 
 
     private void publishEvent(OrderEntity order) {

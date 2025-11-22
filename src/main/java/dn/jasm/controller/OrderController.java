@@ -5,6 +5,7 @@ import dn.jasm.dto.order.ListOrderResponse;
 import dn.jasm.dto.order.OrderMapResponse;
 import dn.jasm.dto.order.OrderRequest;
 import dn.jasm.dto.order.OrderResponse;
+import dn.jasm.entity.enums.OrderStatus;
 import dn.jasm.service.OrderService;
 import dn.jasm.service.cache.OrderCacheService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class OrderController {
     private static final String PROCESS_ORDER = "/api/v1/orders/process";
     private static final String GET_ORDER_BY_ID = "/api/v1/orders/{id}";
     private static final String GET_ORDERS_LIST = "/api/v1/orders/list";
+    private static final String GET_ORDERS_LIST_BY_STATUS = "/api/v1/orders/by-status";
 
 
     private final OrderService orderService;
@@ -53,6 +55,15 @@ public class OrderController {
     @ResponseStatus(HttpStatus.OK)
     public OrderResponse getOrderById(@PathVariable Long id){
         return orderService.getOrderById(id);
+    }
+
+    @GetMapping(GET_ORDERS_LIST_BY_STATUS)
+    public ListOrderResponse findAllByStatus(OrderStatus status,
+                                             int pageNumber,
+                                             int pageSize){
+        return orderService.findAllByStatus(
+                status,pageNumber,pageSize
+        );
     }
 
 

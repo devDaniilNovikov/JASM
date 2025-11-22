@@ -19,7 +19,14 @@ server:
       charset: UTF-8
   shutdown: graceful
 
+
 spring:
+  session:
+    redis:
+      repository-type: default
+      namespace: spring:session
+    timeout: 1800
+
   datasource:
     driver-class-name: org.postgresql.Driver
     username: ${POSTGRES_USERNAME}
@@ -49,14 +56,16 @@ spring:
     auto: true
   spring:
     kafka:
-      bootstrap-servers: localhost:9092
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVER}
+
+
       producer:
         key-serializer: org.apache.kafka.common.serialization.StringSerializer
         value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
         acks: all
         retries: 3
       consumer:
-        group-id: jasm-consumer-group
+        group-id: ${KAFKA_CONSUMER_GROUP_ID}
         auto-offset-reset: earliest
         enable-auto-commit: false
         key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -64,7 +73,7 @@ spring:
         properties:
           spring.json.trusted.packages: "dn.jasm.*"
       listener:
-        ack-mode: manual
+        ack-mode: ${KAFKA_ACK_MODE}
 
 
 
@@ -94,6 +103,11 @@ spring:
     redis:
       host: localhost
       port: 6379
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 8
+          min-idle: 2
 
 
 
@@ -108,8 +122,7 @@ spring:
   validation:
     method:
       adapt-constraint-violations: true
-  main:
-    lazy-initialization: true
+
 
   threads:
     virtual:
@@ -135,7 +148,7 @@ spring:
       enabled: true
   kafka:
     template:
-      default-topic: "jasm-topic"
+      default-topic: ${KAFKA_TOPIC_NAME}
 
 logging:
   level:
