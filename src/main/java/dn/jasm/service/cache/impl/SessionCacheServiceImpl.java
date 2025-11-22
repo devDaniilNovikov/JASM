@@ -1,18 +1,26 @@
-package dn.jasm.service.impl;
+package dn.jasm.service.cache.impl;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.dto.user.SessionKeysRequest;
 import dn.jasm.dto.user.UserSessionLoginDto;
 import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.repository.UserRepository;
-import dn.jasm.service.SessionCacheService;
+import dn.jasm.service.cache.SessionCacheService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,13 +39,14 @@ public class SessionCacheServiceImpl implements SessionCacheService {
     private static final String MAX_INACTIVE_INTERVAL = "MaxInActiveInterval";
     private static final String REDIS_KEYS_PREFIX = "*";
 
-    private final RedisTemplate<String, Object> sessionRedisTemplate;
     private final UserRepository userRepository;
+    private final RedisIndexedSessionRepository sessionRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public void extendSessionTime(String sessionId,
                                   long seconds){
-        sessionRedisTemplate.expire(sessionId,
+        redisTemplate.expire(sessionId,
                 seconds,
                 TimeUnit.SECONDS
         );
@@ -45,20 +54,22 @@ public class SessionCacheServiceImpl implements SessionCacheService {
 
     @Override
     public Set<String> getAllActiveSessions(){
-        return sessionRedisTemplate.keys(SESSION_PREFIX+REDIS_KEYS_PREFIX);
+        return redisTemplate.keys(SESSION_PREFIX+REDIS_KEYS_PREFIX);
     }
 
     @Override
     public void invalidateSession(String sessionId){
         String key = SESSION_PREFIX+sessionId;
-        var session = sessionRedisTemplate.opsForValue().get(key);
+        var session = redisTemplate.opsForValue().get(key);
+        var newSession = sessionRepository.createSession();
         log.info("Session: {}",session);
-        sessionRedisTemplate.delete(key);
+        redisTemplate.delete(key);
     }
 
     @Override
     public Map<String, Object> login(UserSessionLoginDto userSessionLoginDto,
                                      HttpSession session) {
+
         session.setAttribute(USER_ID,userSessionLoginDto.userId());
         session.setAttribute(USERNAME,userSessionLoginDto.username());
         session.setAttribute(LOGIN_TIME,System.currentTimeMillis());
@@ -70,11 +81,11 @@ public class SessionCacheServiceImpl implements SessionCacheService {
     }
 
     @Override
-    public Map<String,Object> getCurrentSession(Long userId,
-                                                HttpSession session,
-                                                String username){
-        var requireUser = userRepository.findById(userId)
-                .filter(userEntity -> userEntity.getUsername().equals(username))
+    public Map<String,Object> getCurrentSession(UserSessionLoginDto userSessionLoginDto,
+                                                HttpSession session){
+        var requireUser = userRepository.findById(userSessionLoginDto.userId())
+                .filter(userEntity -> userEntity.getUsername()
+                        .equals(userSessionLoginDto.username()))
                 .orElseThrow(UserNotFoundException::new);
         Map<String,Object> sessionMap = new HashMap<>();
         sessionMap.put(SESSION_ID,session.getId());
@@ -88,10 +99,34 @@ public class SessionCacheServiceImpl implements SessionCacheService {
 
     }
 
+
     @Override
     public void invalidateSessionsByKeys(SessionKeysRequest sessionKeysRequest) {
-        sessionRedisTemplate.delete(sessionKeysRequest.keys());
+        var keyCount = sessionKeysRequest.keys().size();
+        boolean existAt = redisTemplate.countExistingKeys(
+                sessionKeysRequest.keys())!=keyCount;
+         if (existAt) {
+            throw new IllegalArgumentException("Keys not found");
+        }
+        sessionKeysRequest.keys()
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(redisTemplate::hasKey)
+                .forEach(key->{
+                    redisTemplate.delete(sessionKeysRequest.keys());
+                    log.info("Deleted keys: {}",redisTemplate.keys(key));
+                });
     }
+
+
+
+    @Override
+    @Transactional
+    public void invalidateAllSessions(String redisKeysPrefix) {
+        redisKeysPrefix = REDIS_KEYS_PREFIX;
+        redisTemplate.keys(redisKeysPrefix).forEach(redisTemplate::delete);
+    }
+
 
 
 }

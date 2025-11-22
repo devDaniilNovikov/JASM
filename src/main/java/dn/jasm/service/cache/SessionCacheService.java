@@ -1,9 +1,9 @@
-package dn.jasm.service;
+package dn.jasm.service.cache;
 
 import dn.jasm.dto.user.SessionKeysRequest;
 import dn.jasm.dto.user.UserSessionLoginDto;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 
 import java.util.Map;
 import java.util.Set;
@@ -20,10 +20,12 @@ public interface SessionCacheService {
     Map<String,Object> login(UserSessionLoginDto userSessionLoginDto,
                              HttpSession session);
 
-    Map<String,Object> getCurrentSession(Long userId,
-                                         HttpSession session,
-                                         String username);
+    Map<String,Object> getCurrentSession(UserSessionLoginDto userSessionLoginDto,
+                                         HttpSession session);
 
     void invalidateSessionsByKeys(SessionKeysRequest sessionKeysRequest);
+
+    void invalidateAllSessions(String redisKeysPrefix);
+
 
 }

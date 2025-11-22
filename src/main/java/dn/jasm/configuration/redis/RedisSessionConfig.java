@@ -6,9 +6,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.session.FlushMode;
 import org.springframework.session.SaveMode;
+import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
@@ -31,7 +33,14 @@ public class RedisSessionConfig {
     }
 
     @Bean
-    public RedisTemplate<String,Object> sessionRedisTemplate(
+    public RedisSerializer<Object> springSessionDefaultRedisSerializer(ObjectMapper objectsMapper){
+        return new GenericJackson2JsonRedisSerializer(objectsMapper);
+    }
+
+
+
+    @Bean
+    public RedisIndexedSessionRepository redisIndexedSessionRepository(
             RedisConnectionFactory redisConnectionFactory,
             ObjectMapper objectMapper
     ){
@@ -42,8 +51,12 @@ public class RedisSessionConfig {
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(
                 objectMapper
         );
+        redisTemplate.setDefaultSerializer(serializer);
         redisTemplate.setValueSerializer(serializer);
-        redisTemplate.setHashKeySerializer(serializer);
-        return redisTemplate;
+        redisTemplate.setHashValueSerializer(serializer);
+        redisTemplate.setEnableTransactionSupport(true);
+        redisTemplate.afterPropertiesSet();
+        return new RedisIndexedSessionRepository(redisTemplate);
+
     }
 }
