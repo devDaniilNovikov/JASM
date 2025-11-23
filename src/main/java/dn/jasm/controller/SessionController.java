@@ -101,8 +101,8 @@ public class SessionController {
 
     @GetMapping("/api/v1/session/cookies/value")
     public Map<String,Object> getCookieValue(@RequestParam String sessionId,
-                                 HttpSession session){
-        return cookieCacheService.getCookieValue(sessionId,session);
+                                             HttpServletResponse response){
+        return cookieCacheService.getCookieValue(sessionId,response);
     }
 
 

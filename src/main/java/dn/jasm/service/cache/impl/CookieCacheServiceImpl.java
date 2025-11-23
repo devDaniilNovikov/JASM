@@ -8,6 +8,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -23,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class CookieCacheServiceImpl implements CookieCacheService {
 
-
     @Value("${server.servlet.session.cookie.same-site}")
     private String sameSite;
 
@@ -36,40 +36,35 @@ public class CookieCacheServiceImpl implements CookieCacheService {
     private final RedisTemplate<String, Object> redisTemplate;
 
 
-    private static final String COOKIE_SECRET_KEY = "cookie-key";
-    private static final String COOKIE_HTTP_ONLY_AT = "httpOnly";
-    private static final String COOKIE_SECURE_AT = "secure";
-    private static final String COOKIE_MAX_AGE = "maxAge";
-    private static final String COOKIE_PATH = "path";
-    private static final String COOKIE_SAMESITE = "sameSite";
-    private static final String COOKIE_DOMAIN = "domain";
-    private static final String COOKIE_PATH_SYMBOL = "/";
-    private static final String COOKIE_NAME = "cookieName";
-
 
     @Override
     public Map<String, Object> setCookieForUser(HttpServletResponse response,
                                                 HttpSession session) {
         Cookie cookie = new Cookie(cookieName, generateRandomCookieValue(session));
-        Map<String, Object> cookieAttributes = new LinkedHashMap<>();
         cookie.setHttpOnly(true);
         cookie.setMaxAge(7 * 24 * 60 * 60);
-        cookie.setPath(COOKIE_PATH_SYMBOL);
-        cookie.setAttribute(COOKIE_SAMESITE, sameSite);
+        cookie.setPath(CookieAttributes.COOKIE_PATH.getValue());
+        cookie.setAttribute(CookieAttributes.COOKIE_SAMESITE.getValue(), sameSite);
         cookie.setSecure(isSecure);
         response.addCookie(cookie);
         log.info("Added cookie name is: {},value is: {}",
                 cookie.getName(), cookie.getValue());
-        cookieAttributes.put(COOKIE_NAME, cookieName);
-        cookieAttributes.put(COOKIE_SECRET_KEY, cookie.getValue());
-        cookieAttributes.put(COOKIE_HTTP_ONLY_AT, cookie.isHttpOnly());
-        cookieAttributes.put(COOKIE_SECURE_AT, cookie.getSecure());
-        cookieAttributes.put(COOKIE_MAX_AGE, cookie.getMaxAge());
-        cookieAttributes.put(COOKIE_PATH, cookie.getPath());
-        cookieAttributes.put(COOKIE_SAMESITE, sameSite);
-        cookieAttributes.put(COOKIE_DOMAIN, cookie.getDomain());
+        Map<String, Object> cookieAttributes = collectCookieAttributes(cookie);
         response.setStatus(200);
         log.info("Cookie attributes: {}", cookieAttributes);
+        return cookieAttributes;
+    }
+
+    private Map<String, Object> collectCookieAttributes(Cookie cookie){
+        Map<String, Object> cookieAttributes = new LinkedHashMap<>();
+        cookieAttributes.put(CookieAttributes.COOKIE_NAME.getValue(), cookieName);
+        cookieAttributes.put(CookieAttributes.COOKIE_SECRET_KEY.getValue(), cookie.getValue());
+        cookieAttributes.put(CookieAttributes.COOKIE_HTTP_ONLY_AT.getValue(), cookie.isHttpOnly());
+        cookieAttributes.put(CookieAttributes.COOKIE_SECURE_AT.getValue(), cookie.getSecure());
+        cookieAttributes.put(CookieAttributes.COOKIE_MAX_AGE.getValue(), cookie.getMaxAge());
+        cookieAttributes.put(CookieAttributes.COOKIE_PATH.getValue(), cookie.getPath());
+        cookieAttributes.put(CookieAttributes.COOKIE_SAMESITE.getValue(), sameSite);
+        cookieAttributes.put(CookieAttributes.COOKIE_DOMAIN.getValue(), cookie.getDomain());
         return cookieAttributes;
     }
 
@@ -91,17 +86,21 @@ public class CookieCacheServiceImpl implements CookieCacheService {
     }
 
     @Override
+    @SneakyThrows
     public Map<String,Object> getCookieValue(String sessionId,
-                                             HttpSession session) {
+                                             HttpServletResponse response) {
+
             Object cookieAttributes = redisTemplate.opsForHash()
-                    .get(sessionId, "sessionAttr:cookieAttributes");
+                    .get(sessionId, CookieAttributes.REDIS_COOKIE_HASH_KEY.getValue()
+                    );
             if (cookieAttributes==null){
                 log.error("cookieAttributes not found");
+                response.sendError(400,"cookieAttributes not found!");
                 return null;
-            }
-            final String mapKey = "COOKIE_ATTRIBUTES";
+            };
             Map<String,Object> cookieMap = new HashMap<>();
-            cookieMap.put(mapKey,cookieAttributes);
+            cookieMap.put(CookieAttributes.COOKIE_ATTRIBUTES.getValue(),cookieAttributes);
+            response.setStatus(200);
             return cookieMap;
     }
 }

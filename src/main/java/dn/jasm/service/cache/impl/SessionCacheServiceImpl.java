@@ -61,7 +61,10 @@ public class SessionCacheServiceImpl implements SessionCacheService {
 
     @Override
     public Set<String> getAllActiveSessions(){
-        return redisTemplate.keys(SESSION_PREFIX+REDIS_KEYS_PREFIX);
+        return redisTemplate.keys(SessionAttributes.SESSION_PREFIX
+                        .getValue()
+                        .concat(SessionAttributes.REDIS_KEYS_PREFIX
+                        .getValue()));
     }
 
     @Override
@@ -77,20 +80,27 @@ public class SessionCacheServiceImpl implements SessionCacheService {
                                      HttpSession session,
                                      HttpServletResponse response) {
 
-        session.setAttribute(USER_ID,userSessionLoginDto.userId());
-        session.setAttribute(USERNAME,userSessionLoginDto.username());
-        session.setAttribute(LOGIN_TIME,System.currentTimeMillis());
-        session.setAttribute(SESSION_CREATION_TIME,session.getCreationTime());
-        session.setAttribute(MAX_INACTIVE_INTERVAL,session.getMaxInactiveInterval());
-        Map<String, Object> cookieAttributes = cookieCacheService.setCookieForUser(response,session);
-        session.setAttribute(COOKIE_ATTRIBUTES,cookieAttributes);
+        session.setAttribute(SessionAttributes.USER_ID.getValue(),
+                userSessionLoginDto.userId());
+        session.setAttribute(SessionAttributes.USERNAME.getValue(),
+                userSessionLoginDto.username());
+        session.setAttribute(SessionAttributes.LOGIN_TIME.getValue(),
+                System.currentTimeMillis());
+        session.setAttribute(SessionAttributes.SESSION_CREATION_TIME.getValue(),
+                session.getCreationTime());
+        session.setAttribute(SessionAttributes.MAX_INACTIVE_INTERVAL.getValue(),
+                session.getMaxInactiveInterval());
+        Map<String, Object> cookieAttributes = cookieCacheService.setCookieForUser(
+                response,session);
+        session.setAttribute(SessionAttributes.REDIS_COOKIE_ATTRIBUTES.getValue()
+                ,cookieAttributes);
         if (session.getId()==null){
             response.sendError(400,"Session id is null!!");
         }
         response.setStatus(200);
         return Map.of(
-                SESSION_ID,session.getId(),
-                USER_ID,userSessionLoginDto.userId()
+                SessionAttributes.SESSION_ID.getValue(),session.getId(),
+                SessionAttributes.USER_ID.getValue(),userSessionLoginDto.userId()
         );
     }
 
@@ -103,14 +113,14 @@ public class SessionCacheServiceImpl implements SessionCacheService {
                         .equals(userSessionLoginDto.username()))
                 .orElseThrow(UserNotFoundException::new);
         Map<String,Object> sessionMap = new HashMap<>();
-        sessionMap.put(SESSION_ID,session.getId());
-        sessionMap.put(USER_ID,requireUser.getId());
-        sessionMap.put(USERNAME,requireUser.getUsername());
-        sessionMap.put(LOGIN_TIME,System.currentTimeMillis());
+        sessionMap.put(SessionAttributes.SESSION_ID.getValue(),session.getId());
+        sessionMap.put(SessionAttributes.USER_ID.getValue(),requireUser.getId());
+        sessionMap.put(SessionAttributes.USERNAME.getValue(),requireUser.getUsername());
+        sessionMap.put(SessionAttributes.LOGIN_TIME.getValue(),System.currentTimeMillis());
         response.setStatus(200);
         Map<String,Object> updatedSession = new HashMap<>(sessionMap);
-        updatedSession.remove(USERNAME);
-        updatedSession.remove(LOGIN_TIME);
+        updatedSession.remove(SessionAttributes.USERNAME.getValue());
+        updatedSession.remove(SessionAttributes.LOGIN_TIME.getValue());
         return updatedSession;
 
     }
@@ -141,7 +151,7 @@ public class SessionCacheServiceImpl implements SessionCacheService {
     @Transactional
     public void invalidateSessions(String redisKeysPrefix,
                                    HttpServletResponse response) {
-        redisKeysPrefix = REDIS_KEYS_PREFIX;
+        redisKeysPrefix = SessionAttributes.REDIS_KEYS_PREFIX.getValue();
         redisTemplate.keys(redisKeysPrefix).forEach(redisTemplate::delete);
     }
 
