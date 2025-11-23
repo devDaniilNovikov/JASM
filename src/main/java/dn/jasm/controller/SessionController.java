@@ -3,12 +3,16 @@ package dn.jasm.controller;
 import dn.jasm.dto.user.SessionKeysRequest;
 import dn.jasm.dto.user.UserSessionLoginDto;
 import dn.jasm.service.cache.SessionCacheService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.session.data.redis.RedisIndexedSessionRepository;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.MessageFormat;
 import java.util.*;
 
 @Slf4j
@@ -36,38 +40,61 @@ public class SessionController {
 
 
     @PostMapping(LOGIN)
-    public Map<String,Object> login(@RequestBody UserSessionLoginDto userSessionLoginDto,
-                                    HttpSession session){
-        return sessionCacheService.login(userSessionLoginDto, session);
+    public Map<String,Object> login(
+            @RequestBody @Valid UserSessionLoginDto userSessionLoginDto,
+            HttpSession session,
+            HttpServletResponse response
+    ){
+        return sessionCacheService.login(userSessionLoginDto, session,response);
     }
 
     @GetMapping(GET_CURRENT_SESSION)
     public Map<String,Object> getCurrentSession(@RequestBody UserSessionLoginDto userSessionLoginDto,
-                                                HttpSession session){
-        return sessionCacheService.getCurrentSession(userSessionLoginDto,session);
+                                                HttpSession session,
+                                                HttpServletResponse response){
+        return sessionCacheService.getCurrentSession(userSessionLoginDto,session,response);
     }
 
     @PostMapping(LOGOUT)
-    public String logout(HttpSession session){
-        sessionCacheService.invalidateSession(session.getId());
-        session.invalidate();
-        return "Session removed from Redis";
+    public String logout(HttpSession session,
+                         @RequestParam String sessionId,
+                         HttpServletResponse response){
+        if (sessionId.equals(session.getId())) {
+            sessionCacheService.invalidateSession(session.getId(),response);
+            session.invalidate();
+            response.setStatus(200);
+            return "Session removed from Redis";
+        }
+        else {
+            response.setStatus(400);
+            throw new IllegalArgumentException(
+                    MessageFormat.format("Wrong session id: {0}",sessionId)
+            );
+        }
     }
 
     @PostMapping(EXTEND_SESSION_TIME)
     public void extendSessionTime(@RequestParam String sessionId,
-                                  @RequestParam long seconds){
-        sessionCacheService.extendSessionTime(sessionId,seconds);
+                                  @RequestParam long minutes){
+        sessionCacheService.extendSessionTime(sessionId,minutes);
     }
 
     @PostMapping(INVALIDATE_SESSIONS)
-    public void invalidateSessionsByKeys(@RequestBody SessionKeysRequest sessionKeysRequest){
-        sessionCacheService.invalidateSessionsByKeys(sessionKeysRequest);
+    public void invalidateSessionsByKeys(@RequestBody SessionKeysRequest sessionKeysRequest,
+                                         HttpServletResponse response){
+        sessionCacheService.invalidateSessions(sessionKeysRequest,response);
     }
 
     @PostMapping(INVALIDATE_ALL_SESSIONS)
-    public void invalidateAllSessions(@RequestParam String redisKeysPrefix){
-        sessionCacheService.invalidateAllSessions(redisKeysPrefix);
+    public void invalidateAllSessions(@RequestParam String redisKeysPrefix,
+                                      HttpServletResponse response){
+        sessionCacheService.invalidateSessions(redisKeysPrefix,response);
+    }
+
+    @GetMapping("/api/v1/session/expire")
+    public String getTtlOfSession(@RequestParam String sessionId,
+                                  HttpServletResponse response){
+        return sessionCacheService.getTtlOfSession(sessionId,response);
     }
 
 

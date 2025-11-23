@@ -1,9 +1,17 @@
 package dn.jasm.dto.user;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.*;
 
-public record UserSessionLoginDto(Long userId,
-                                  String username) {
-}
+import java.text.MessageFormat;
+
+
+public record UserSessionLoginDto(@NotNull(message = "userId can't be null")
+                                  Long userId,
+                                  @NotNull(message = "username can't be null")
+                                  @Size(min = 5,max = 64, message = "username must be not min 5, and dont be max 64")
+                                  String username)
+{}

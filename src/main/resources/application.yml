@@ -17,7 +17,14 @@ server:
   servlet:
     encoding:
       charset: UTF-8
-  shutdown: graceful
+    session:
+      cookie:
+        http-only: true
+        same-site: strict
+        name: JSESSION_COOKIE
+        secure: true
+
+
 
 
 spring:

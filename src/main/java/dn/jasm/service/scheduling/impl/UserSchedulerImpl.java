@@ -5,9 +5,7 @@ import dn.jasm.entity.enums.UserStatus;
 import dn.jasm.service.UserService;
 import dn.jasm.service.scheduling.UserScheduler;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.data.redis.core.RedisTemplate;
+import lombok.extern.slf4j.Slf4j;import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +21,6 @@ public class UserSchedulerImpl implements UserScheduler {
     private final UserRepository userRepository;
     private final UserService userService;
     private final RedisTemplate<String,String> redisTemplate;
-    private final RabbitTemplate rabbitTemplate;
 
     @Override
     @Transactional
@@ -38,7 +35,7 @@ public class UserSchedulerImpl implements UserScheduler {
                 .stream()
                 .collect(Collectors.toMap(UserEntity::getUsername,
                         UserEntity::getStatus));
-        rabbitTemplate.destroy();
+
         log.info("Banned users is delete : {}",users);
     }
 

@@ -1,6 +1,7 @@
 package dn.jasm.configuration.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -17,9 +18,11 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 
 @Configuration
 @EnableRedisHttpSession(flushMode = FlushMode.ON_SAVE,
-saveMode = SaveMode.ALWAYS,redisNamespace = "spring:session:sessions",
-maxInactiveIntervalInSeconds = 3600)
+saveMode = SaveMode.ALWAYS, maxInactiveIntervalInSeconds = 3600)
 public class RedisSessionConfig {
+
+    @Value("${server.servlet.session.cookie.same-site}")
+    private String sameSiteType;
 
     @Bean
     public CookieSerializer cookieSerializer(){
@@ -29,6 +32,7 @@ public class RedisSessionConfig {
         serializer.setDomainNamePattern("^.+?\\.(\\w+\\.[a-z]+)$");
         serializer.setUseHttpOnlyCookie(true);
         serializer.setUseSecureCookie(false);
+        serializer.setSameSite(sameSiteType);
         return serializer;
     }
 

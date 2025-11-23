@@ -72,8 +72,6 @@ dependencies {
     implementation("org.springframework.integration:spring-integration-websocket")
     implementation("org.springframework.integration:spring-integration-stomp")
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j")
-    implementation("org.springframework.boot:spring-boot-starter-amqp")
-    implementation("org.springframework.integration:spring-integration-amqp")
     implementation("org.springframework.session:spring-session-data-redis")
     testImplementation("org.springframework.amqp:spring-rabbit-test")
     runtimeOnly("org.postgresql:postgresql:42.7.7")
