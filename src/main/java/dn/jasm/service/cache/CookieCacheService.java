@@ -14,5 +14,6 @@ public interface CookieCacheService {
 
     void deleteCookie(HttpServletResponse httpServletResponse);
 
-    String getCookieValue(String cookieName);
+    Map<String,Object> getCookieValue(String sessionId,
+                          HttpSession session);
 }

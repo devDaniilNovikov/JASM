@@ -2,6 +2,7 @@ package dn.jasm.controller;
 
 import dn.jasm.dto.user.SessionKeysRequest;
 import dn.jasm.dto.user.UserSessionLoginDto;
+import dn.jasm.service.cache.CookieCacheService;
 import dn.jasm.service.cache.SessionCacheService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -21,9 +22,10 @@ import java.util.*;
 public class SessionController {
 
     private final SessionCacheService sessionCacheService;
+    private final CookieCacheService cookieCacheService;
 
 
-
+    private static final String GET_TTL_OF_SESSION = "/api/v1/session/expire";
     private static final String LOGIN = "/api/v1/session/login";
     private static final String LOGOUT = "/api/v1/session/logout";
     private static final String GET_CURRENT_SESSION = "/api/v1/session/current";
@@ -91,10 +93,16 @@ public class SessionController {
         sessionCacheService.invalidateSessions(redisKeysPrefix,response);
     }
 
-    @GetMapping("/api/v1/session/expire")
+    @GetMapping(GET_TTL_OF_SESSION)
     public String getTtlOfSession(@RequestParam String sessionId,
                                   HttpServletResponse response){
         return sessionCacheService.getTtlOfSession(sessionId,response);
+    }
+
+    @GetMapping("/api/v1/session/cookies/value")
+    public Map<String,Object> getCookieValue(@RequestParam String sessionId,
+                                 HttpSession session){
+        return cookieCacheService.getCookieValue(sessionId,session);
     }
 
 
