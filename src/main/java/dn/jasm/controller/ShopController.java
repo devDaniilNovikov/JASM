@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -58,6 +60,12 @@ public class ShopController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteShopById(@RequestParam Long id){
         shopService.deleteShop(id);
+    }
+
+    @GetMapping("/api/v1/shops/shop/info")
+    public Map<String, ShopEntity> getInformationAboutShop(
+            @RequestParam(value = "shopName") String shopName){
+        return shopService.getInformationAboutShop(shopName);
     }
 
 

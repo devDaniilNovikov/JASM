@@ -1,5 +1,6 @@
 package dn.jasm.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.redis.CacheNames;
@@ -44,6 +45,8 @@ public class ShopServiceImpl implements ShopService {
     private final UserRepository userRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectsMapper;
+
+    private static final String REDIS_KEYS_PREFIX = "*";
 
     @Value("${spring.cache.redis.time-to-live}")
     private Duration ttl;
@@ -223,10 +226,11 @@ public class ShopServiceImpl implements ShopService {
 
 
 
+
     @Override
     public MapShopResponse getSortedRatingsOfShops() {
         var cacheKeyPrefix = CacheNames.SHOP_CACHE.getValue();
-        Set<String> keys = scanKeys(cacheKeyPrefix + "*");
+        Set<String> keys = scanKeys(cacheKeyPrefix + REDIS_KEYS_PREFIX);
         if (!keys.isEmpty()) {
             List<Object> cachedValues = redisBatchGet(new ArrayList<>(keys));
             log.info("Values from cache: {}",cachedValues);
@@ -253,7 +257,6 @@ public class ShopServiceImpl implements ShopService {
                 return mapShopResponse;
             }
         }
-
         Map<String, List<ShopEntity>> shops = shopRepository.findAll()
                 .stream()
                 .collect(Collectors.groupingBy(
@@ -317,6 +320,32 @@ public class ShopServiceImpl implements ShopService {
                     log.error("Error during deleting");
                     return null;
                 });
+    }
+
+    @Override
+    public Map<String, ShopEntity> getInformationAboutShop(String shopName) {
+        Map<String,ShopEntity> shopMap = new ConcurrentHashMap<>();
+
+
+
+        ShopEntity value = shopRepository.findByNameIgnoreCase(shopName)
+                .stream()
+                .filter(shopEntity -> shopEntity.getRating()>0)
+                .collect(Collectors.groupingBy(
+                        ShopEntity::getName,
+                        Collectors.filtering(s->s.getOwnerName()!=null,
+                                Collectors.toList())
+
+                ))
+                .values()
+                .stream()
+                .flatMap(Collection::stream)
+                .findAny()
+                .orElseThrow(RuntimeException::new);
+        shopMap.computeIfAbsent(shopName,v->value);
+       redisTemplate.opsForValue().multiSet(shopMap);
+        redisTemplate.expire(shopName,10,TimeUnit.MINUTES);
+        return shopMap;
     }
 
 

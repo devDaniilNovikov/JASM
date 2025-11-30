@@ -30,6 +30,8 @@ public interface ShopService {
 
     void deleteByIds(List<Long> shopIds);
 
+    Map<String,ShopEntity> getInformationAboutShop(String shopName);
+
 
 
 
