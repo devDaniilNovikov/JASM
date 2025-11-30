@@ -199,36 +199,67 @@ public class ShopServiceImpl implements ShopService {
 
     }
 
+    private Set<String> scanKeys(String pattern) {
+        Set<String> keys = new HashSet<>();
+
+        redisTemplate.execute((RedisCallback<Set<String>>) connection -> {
+            ScanOptions options = ScanOptions.scanOptions()
+                    .match(pattern)
+                    .count(100)
+                    .build();
+
+            Cursor<byte[]> cursor = connection.scan(options);
+
+            while (cursor.hasNext()) {
+                keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+            }
+
+            cursor.close();
+            return keys;
+        });
+
+        return keys;
+    }
+
+
 
     @Override
     public MapShopResponse getSortedRatingsOfShops() {
-        String prefix = CacheNames.SHOP_CACHE.getValue();
-        Set<String> keys = redisTemplate.scan(
-                ScanOptions.scanOptions()
-                        .match(prefix)
-                        .count(100)
-                        .build())
-                        .stream()
-                        .collect(Collectors.toSet());
-        redisTemplate.multi();
-        List<Object> keysList = redisTemplate.opsForValue().multiGet(keys);
-        if (keysList!=null){
-            MapShopResponse mapShopResponse = keysList.stream()
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .map(key->objectsMapper.convertValue(key,MapShopResponse.class))
-                    .orElse(null);
-            if (mapShopResponse!=null){
-                log.info("Value getting from cache: {}",mapShopResponse.getShopMap().values());
+        var cacheKeyPrefix = CacheNames.SHOP_CACHE.getValue();
+        Set<String> keys = scanKeys(cacheKeyPrefix + "*");
+        if (!keys.isEmpty()) {
+            List<Object> cachedValues = redisBatchGet(new ArrayList<>(keys));
+            log.info("Values from cache: {}",cachedValues);
+            Map<String, List<ShopEntity>> shops = new HashMap<>();
+            for (Object cachedValue : cachedValues) {
+                log.info("Value from cache: {}",cachedValue);
+                if (cachedValue != null) {
+                    List<ShopEntity> shopList = objectsMapper.convertValue(
+                            cachedValue,
+                            new TypeReference<List<ShopEntity>>() {}
+                    );
+                    log.info("New shopList: {}",shopList);
+                    if (!shopList.isEmpty()) {
+                        String shopName = shopList.get(0).getName();
+                        shops.put(shopName, shopList);
+                    }
+                }
+            }
+
+            if (!shops.isEmpty()) {
+                log.info("Values were retrieved from cache, total shops: {}", shops.size());
+                MapShopResponse mapShopResponse = new MapShopResponse();
+                mapShopResponse.setShopMap(shops);
                 return mapShopResponse;
             }
         }
+
         Map<String, List<ShopEntity>> shops = shopRepository.findAll()
                 .stream()
                 .collect(Collectors.groupingBy(
                         ShopEntity::getName,
                         Collectors.filtering(
-                                shopEntity -> shopEntity.getLocation() == null,
+                                shopEntity -> shopEntity.getRating()<5.0,
                                 Collectors.toList())))
                 .entrySet()
                 .stream()
@@ -236,7 +267,7 @@ public class ShopServiceImpl implements ShopService {
                     boolean firstCondition = !entry.getValue().isEmpty();
                     boolean secondCondition = entry.getValue()
                             .stream()
-                            .allMatch(shopEntity -> shopEntity.getRating()>0);
+                            .allMatch(shopEntity -> shopEntity.getLocation() == null);
                     boolean thirdCondition = entry.getValue()
                             .stream()
                             .map(ShopEntity::getItems)
@@ -244,6 +275,13 @@ public class ShopServiceImpl implements ShopService {
                             .allMatch(Objects::isNull);
                     var trueAt = Boolean.logicalAnd(firstCondition,secondCondition);
                     return Boolean.logicalAnd(trueAt,thirdCondition);
+                })
+                .peek(shop->{
+                    var key = cacheKeyPrefix+shop.getKey();
+                    var redisValue = shop.getValue();
+                    var ttl = Duration.ofMinutes(10);
+                    redisTemplate.multi();
+                    redisTemplate.opsForValue().set(key,redisValue,ttl);
                 })
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
@@ -254,7 +292,7 @@ public class ShopServiceImpl implements ShopService {
         }
         MapShopResponse mapShopResponse = new MapShopResponse();
         mapShopResponse.setShopMap(shops);
-        redisTemplate.opsForValue().set(prefix,mapShopResponse,Duration.ofMinutes(10));
+
         return mapShopResponse;
     }
 
@@ -298,9 +336,7 @@ public class ShopServiceImpl implements ShopService {
     private List<Object> redisBatchGet(List<String> keys){
         return redisTemplate.executePipelined((RedisCallback<Object>) redis->{
             for (String key: keys){
-                redis.openPipeline();
                 redis.stringCommands().get(key.getBytes());
-                redis.closePipeline();
             }
             return null;
         });

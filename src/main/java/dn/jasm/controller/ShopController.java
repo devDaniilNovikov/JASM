@@ -23,6 +23,7 @@ public class ShopController {
     private static final String GET_SHOP_LIST = "/api/v1/shops";
     private static final String REGISTER_SHOP = "/api/v1/shops/shop/register";
     private static final String GET_SHOP_INFO = "/api/v1/shops/info";
+    private static final String DELETE_SHOP_BY_ID = "/api/v1/shops/shop/delete";
     private static final String BAN_SHOP = "/api/v1/shops/shop/ban";
     private static final String GET_SHOP_BY_ID = "/api/v1/shops/shop/{id}";
     private static final String GET_OWNER_OF_SHOP = "/api/v1/shops/shop/{shopId}/owner";
@@ -51,6 +52,12 @@ public class ShopController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteByIds(@RequestParam List<Long> shopIds){
         shopService.deleteByIds(shopIds);
+    }
+
+    @DeleteMapping(DELETE_SHOP_BY_ID)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteShopById(@RequestParam Long id){
+        shopService.deleteShop(id);
     }
 
 
