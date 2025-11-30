@@ -21,7 +21,7 @@ server:
       cookie:
         http-only: true
         same-site: strict
-        name: JSESSION_COOKIE
+        name: SESSION_COOKIE
         secure: true
 
 
@@ -58,7 +58,7 @@ spring:
       hibernate:
         connection:
           autocommit: false
-        format_sql: true
+        format_sql: false
   aop:
     auto: true
   spring:
@@ -102,8 +102,7 @@ spring:
   batch:
     job:
       enabled: true
-  devtools:
-    add-properties: true
+
 
 
   data:
@@ -125,6 +124,8 @@ spring:
       cache-null-values: false
       use-key-prefix: true
       enable-statistics: true
+
+
 
   validation:
     method:
@@ -188,22 +189,16 @@ order:
     value: ${ORDER_DISCOUNT_VALUE}
   limit:
     value: ${ORDER_LIMIT_VALUE}
-rabbitMq:
 
 
 
 
 
+#s3:
+#  region: ${S3_REGION}
+#  accessKey: ${S3_ACCESS_KEY}
+#  secretKey: ${S3_SECRET_KEY}
 
-s3:
-  region: ${S3_REGION}
-  accessKey: ${S3_ACCESSKEY}
-  secretKey: ${S3_SECRET_KEY}
-
-
-transactions:
-  delay:
-    value: 10
 
 
 

@@ -40,6 +40,8 @@ public class UserEntity extends BasedEntity {
     @BatchSize(size = BATCH_SIZE)
     private List<TransactionEntity> transactionEntity = new ArrayList<>();
 
+
+
     private String status;
 
     @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
@@ -47,6 +49,12 @@ public class UserEntity extends BasedEntity {
     @BatchSize(size = BATCH_SIZE)
     @JsonManagedReference("user-orders")
     private List<OrderEntity> orders = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @BatchSize(size = BATCH_SIZE)
+    @JsonManagedReference("user-shops")
+    private List<ShopEntity> shops = new ArrayList<>();
 
     @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
     @ToString.Exclude

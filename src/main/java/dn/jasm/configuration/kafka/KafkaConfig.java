@@ -77,7 +77,7 @@ public class KafkaConfig {
         return factory;
     }
 
-    @Bean
+    @Bean(value = "topic")
     public NewTopic topicBuilder(){
         return TopicBuilder.name(topicName)
                 .replicas(5)

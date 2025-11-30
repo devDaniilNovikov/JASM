@@ -43,7 +43,7 @@ public class WebConfig {
         objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
         objectMapper.disable(DeserializationFeature.EAGER_DESERIALIZER_FETCH,
                 DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY);
-        objectMapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return objectMapper;
     }
 

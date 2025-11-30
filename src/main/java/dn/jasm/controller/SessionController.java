@@ -2,15 +2,12 @@ package dn.jasm.controller;
 
 import dn.jasm.dto.user.SessionKeysRequest;
 import dn.jasm.dto.user.UserSessionLoginDto;
-import dn.jasm.service.cache.CookieCacheService;
 import dn.jasm.service.cache.SessionCacheService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.session.data.redis.RedisIndexedSessionRepository;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.MessageFormat;
@@ -22,7 +19,6 @@ import java.util.*;
 public class SessionController {
 
     private final SessionCacheService sessionCacheService;
-    private final CookieCacheService cookieCacheService;
 
 
     private static final String GET_TTL_OF_SESSION = "/api/v1/session/expire";
@@ -58,14 +54,14 @@ public class SessionController {
     }
 
     @PostMapping(LOGOUT)
-    public String logout(HttpSession session,
+    public void logout(HttpSession session,
                          @RequestParam String sessionId,
                          HttpServletResponse response){
         if (sessionId.equals(session.getId())) {
             sessionCacheService.invalidateSession(session.getId(),response);
             session.invalidate();
             response.setStatus(200);
-            return "Session removed from Redis";
+             log.info("Session: {} removed from Redis",sessionId);
         }
         else {
             response.setStatus(400);
@@ -99,11 +95,6 @@ public class SessionController {
         return sessionCacheService.getTtlOfSession(sessionId,response);
     }
 
-    @GetMapping("/api/v1/session/cookies/value")
-    public Map<String,Object> getCookieValue(@RequestParam String sessionId,
-                                             HttpServletResponse response){
-        return cookieCacheService.getCookieValue(sessionId,response);
-    }
 
 
 

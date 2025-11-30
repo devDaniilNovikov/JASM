@@ -1,9 +1,7 @@
-package dn.jasm.configuration;
+package dn.jasm.configuration.web;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.PrettyPrinter;
 import com.fasterxml.jackson.core.StreamWriteFeature;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.stripe.net.StripeResponse;
@@ -23,6 +21,9 @@ public class StripeResponseSerializer extends StdSerializer<StripeResponse> {
     public void serialize(StripeResponse value,
                           JsonGenerator gen,
                           SerializerProvider provider) throws IOException {
+        if (value.body()!=null){
+            throw new IllegalArgumentException("Response value is null");
+        }
         gen.writeStartObject();
         gen.writeStringField("body",value.body());
         gen.writeNumberField("code",value.code());

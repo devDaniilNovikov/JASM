@@ -6,15 +6,20 @@ import dn.jasm.exception.RedisKeyException;
 import dn.jasm.service.RedisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.time.Duration;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -62,7 +67,13 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     public Set<String> getKeySet(String keyPattern) {
-        return Set.of();
+        return redisTemplate.scan(
+                ScanOptions.scanOptions()
+                        .match("*".getBytes(StandardCharsets.UTF_8))
+                        .count(100)
+                        .build())
+                .stream()
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -135,6 +146,16 @@ public class RedisServiceImpl implements RedisService {
                 throw new RuntimeException("");
             }
         }
+    }
+
+    @Override
+    public List<Object> getObjectsFromRedis(List<String> keys) {
+         return redisTemplate.executePipelined((RedisCallback<Object>) connection->{
+            for (String key:keys){
+                connection.stringCommands().get(key.getBytes());
+            }
+            return null;
+        });
     }
 
     private static void log(Object value,

@@ -9,7 +9,8 @@ public enum CacheNames {
     CARD_CACHE("card: #"),
     SHOP_CACHE("shop: #"),
     COMMENT_CACHE("comment #"),
-    ITEM_CACHE("item #");
+    ITEM_CACHE("item #"),
+    SHOP_LIST("shops #");
 
 
      CacheNames(String value) {

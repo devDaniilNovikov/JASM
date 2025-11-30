@@ -1,57 +1,33 @@
 package dn.jasm.service.cache.impl;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.dto.user.SessionKeysRequest;
 import dn.jasm.dto.user.UserSessionLoginDto;
 import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.repository.UserRepository;
-import dn.jasm.service.cache.CookieCacheService;
 import dn.jasm.service.cache.SessionCacheService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.text.MessageFormat;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SessionCacheServiceImpl implements SessionCacheService {
 
-    private static final String SESSION_PREFIX = "spring:session";
-    private static final String SESSION_ID = "sessionId";
-    private static final String USER_ID = "userId";
-    private static final String USERNAME = "username";
-    private static final String LOGIN_TIME = "loginTime";
-    private static final String SESSION_CREATION_TIME = "sessionCreationTime";
-    private static final String MAX_INACTIVE_INTERVAL = "MaxInActiveInterval";
-    private static final String REDIS_KEYS_PREFIX = "*";
-    private static final String COOKIE_ATTRIBUTES = "cookieAttributes";
-
-    @Value("${server.servlet.session.cookie.name}")
-    private String cookieName;
 
     private final UserRepository userRepository;
     private final RedisIndexedSessionRepository sessionRepository;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final CookieCacheService cookieCacheService;
+
 
     @Override
     public void extendSessionTime(String sessionId,
@@ -90,10 +66,6 @@ public class SessionCacheServiceImpl implements SessionCacheService {
                 session.getCreationTime());
         session.setAttribute(SessionAttributes.MAX_INACTIVE_INTERVAL.getValue(),
                 session.getMaxInactiveInterval());
-        Map<String, Object> cookieAttributes = cookieCacheService.setCookieForUser(
-                response,session);
-        session.setAttribute(SessionAttributes.REDIS_COOKIE_ATTRIBUTES.getValue()
-                ,cookieAttributes);
         if (session.getId()==null){
             response.sendError(400,"Session id is null!!");
         }

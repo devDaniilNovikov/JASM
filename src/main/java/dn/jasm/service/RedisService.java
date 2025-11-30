@@ -26,6 +26,8 @@ public interface RedisService {
 
     void putToCache(String key, Object value, CacheNames cacheNames);
 
+    List<Object> getObjectsFromRedis(List<String> keys);
+
 
 
 

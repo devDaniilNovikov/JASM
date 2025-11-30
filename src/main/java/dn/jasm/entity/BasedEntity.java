@@ -29,11 +29,13 @@ public abstract class BasedEntity implements Serializable {
     private Long id;
 
     @CreationTimestamp
-    @JsonFormat(pattern = "yyyy-MM-dd" )
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy HH:mm:ss")
+    @DateTimeFormat(pattern = "dd-MM-yyyy HH:mm:ss")
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy HH:mm:ss")
+    @DateTimeFormat(pattern = "dd-MM-yyyy HH:mm:ss")
     private LocalDateTime updatedAt;
 
     public BasedEntity(LocalDateTime createdAt,

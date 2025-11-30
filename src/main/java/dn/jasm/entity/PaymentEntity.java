@@ -31,6 +31,16 @@ public class PaymentEntity {
     @JsonBackReference("card-payments")
     private CardEntity card;
 
+    @ManyToOne(fetch = FetchType.LAZY,cascade = {
+            CascadeType.MERGE,
+            CascadeType.PERSIST,
+            CascadeType.DETACH,
+            CascadeType.REFRESH
+    })
+    @JoinColumn(name = "shop_id")
+    @JsonBackReference("shop-payments")
+    private ShopEntity shop;
+
     private BigDecimal amount;
 
     private String currency;

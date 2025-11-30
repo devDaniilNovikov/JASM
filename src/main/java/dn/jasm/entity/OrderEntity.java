@@ -55,6 +55,17 @@ public class OrderEntity extends BasedEntity {
     @Enumerated(EnumType.STRING)
     private OrderStatus orderStatus;
 
+    @ManyToOne(fetch = FetchType.LAZY,cascade = {
+            CascadeType.MERGE,
+            CascadeType.PERSIST,
+            CascadeType.DETACH,
+            CascadeType.REFRESH
+    })
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JsonBackReference("shop-orders")
+    @JoinColumn(name = "shop_id")
+    private ShopEntity shop;
+
 
     @Override
     public boolean equals(Object object) {
