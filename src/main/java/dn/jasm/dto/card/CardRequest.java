@@ -20,9 +20,8 @@ public class CardRequest {
     private String cvc;
     @NotNull
     private String fio;
-    private String userId;
-    @NotNull
-    private CardType cardType;
+//    @NotNull
+//    private CardType cardType;
     private Long expMonth;
     private Long expYear;
 

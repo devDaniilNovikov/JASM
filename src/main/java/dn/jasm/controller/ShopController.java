@@ -40,9 +40,24 @@ public class ShopController {
         return shopService.getListOfShops(pageNumber,pageSize);
     }
 
+    @GetMapping(GET_SHOP_BY_ID)
+    public ShopResponse getShopById(@PathVariable Long id){
+        return shopService.findById(id);
+    }
+
     @PostMapping(REGISTER_SHOP)
     public ShopResponse registerShop(@RequestBody ShopRequest shopRequest){
         return shopService.registerShop(shopRequest);
+    }
+
+    @GetMapping("/api/v1/shops/items")
+    public MapShopResponse getItemsOfShop(@RequestParam String shopName){
+        return shopService.getItemsOfShop(shopName);
+    }
+
+    @GetMapping(FIND_SHOP_BY_SHOP_NAME)
+    public ShopResponse getShopByName(@RequestParam String shopName){
+        return shopService.findByShopName(shopName);
     }
 
     @GetMapping(GET_SHOP_INFO)

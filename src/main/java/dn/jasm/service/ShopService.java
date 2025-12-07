@@ -13,9 +13,9 @@ import java.util.concurrent.CompletableFuture;
 
 public interface ShopService {
 
-    ShopEntity findById(Long id);
+    ShopResponse findById(Long id);
 
-    ShopEntity findByShopName(String shopName);
+    ShopResponse findByShopName(String shopName);
 
     ShopResponse registerShop(ShopRequest shopRequest);
 
@@ -31,6 +31,8 @@ public interface ShopService {
     void deleteByIds(List<Long> shopIds);
 
     Map<String,ShopEntity> getInformationAboutShop(String shopName);
+
+    MapShopResponse getItemsOfShop(String shopName);
 
 
 

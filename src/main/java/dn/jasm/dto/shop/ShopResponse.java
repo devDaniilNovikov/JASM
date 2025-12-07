@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dn.jasm.dto.item.ItemResponse;
 import dn.jasm.dto.payment.PaymentResponse;
 import dn.jasm.entity.ItemEntity;
 import dn.jasm.entity.UserEntity;
@@ -93,6 +94,10 @@ public class ShopResponse implements Serializable {
     @JsonFormat(shape = JsonFormat.Shape.STRING,pattern = "yyyy-MM-dd")
     @Schema(description = "Дата последнего обновления", type = "string", format = "date")
     private String updatedAt;
+
+    @Schema(description = "Предметы магазина")
+    @JsonProperty(namespace = "items_of_shop")
+    private Map<String,List<ItemResponse>> items;
 
     @NotNull(message = "verified status can' be null")
     @Schema(description = "Статус верификации магазина", requiredMode = Schema.RequiredMode.REQUIRED)

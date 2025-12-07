@@ -1,5 +1,6 @@
 package dn.jasm.mapper;
 
+import dn.jasm.dto.card.CardRequest;
 import dn.jasm.dto.card.CardResponse;
 import dn.jasm.dto.card.ListCardResponse;
 import dn.jasm.entity.CardEntity;
@@ -13,7 +14,6 @@ public class CardMapper {
 
     public CardResponse toDto(CardEntity cardEntity){
         return CardResponse.builder()
-                .id(cardEntity.getId().toString())
                 .cardNumber(cardEntity.getCardNumber())
                 .cvc(cardEntity.getCvc())
                 .expMonth(cardEntity.getExpMonth())
@@ -37,11 +37,19 @@ public class CardMapper {
 
     public CardEntity toEntity(CardResponse cardResponse){
         CardEntity card = new CardEntity();
-        card.setId(Long.valueOf(cardResponse.getId()));
         card.setCardNumber(cardResponse.getCardNumber());
         card.setCvc(cardResponse.getCvc());
         card.setExpMonth(cardResponse.getExpMonth());
         card.setExpYear(cardResponse.getExpYear());
+        return card;
+    }
+
+    public CardEntity mapToEntity(CardRequest cardRequest){
+        CardEntity card = new CardEntity();
+        card.setCardNumber(cardRequest.getCardNumber());
+        card.setCvc(cardRequest.getCvc());
+        card.setExpMonth(cardRequest.getExpMonth());
+        card.setExpYear(cardRequest.getExpYear());
         return card;
     }
 

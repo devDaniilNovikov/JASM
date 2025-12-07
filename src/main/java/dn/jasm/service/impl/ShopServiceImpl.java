@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.redis.CacheNames;
+import dn.jasm.dto.item.ItemRequest;
+import dn.jasm.dto.item.ItemResponse;
 import dn.jasm.dto.shop.ListShopResponse;
 import dn.jasm.dto.shop.MapShopResponse;
 import dn.jasm.dto.shop.ShopRequest;
@@ -11,7 +13,12 @@ import dn.jasm.dto.shop.ShopResponse;
 import dn.jasm.entity.ShopEntity;
 import dn.jasm.entity.UserEntity;
 import dn.jasm.event.shop.ShopEvent;
+import dn.jasm.exception.ItemNotFoundException;
+import dn.jasm.exception.ShopNotFoundException;
 import dn.jasm.exception.UserNotFoundException;
+import dn.jasm.mapper.ItemMapper;
+import dn.jasm.mapper.ShopMapper;
+import dn.jasm.repository.ItemRepository;
 import dn.jasm.repository.ShopRepository;
 import dn.jasm.repository.UserRepository;
 import dn.jasm.service.ShopService;
@@ -41,10 +48,13 @@ import java.util.stream.Collectors;
 public class ShopServiceImpl implements ShopService {
 
     private final ShopRepository shopRepository;
-    private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository;
+    private final ItemRepository itemRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectsMapper;
+    private final ShopMapper shopMapper;
+    private final ItemMapper itemMapper;
 
     private static final String REDIS_KEYS_PREFIX = "*";
 
@@ -56,18 +66,18 @@ public class ShopServiceImpl implements ShopService {
 
 
     @Override
-    public ShopEntity findById(Long id) {
+    public ShopResponse findById(Long id) {
         if (redisTemplate.hasKey(String.valueOf(id))) {
-            return shopRepository.findById(id)
-                    .orElseThrow(RuntimeException::new);
+            return shopMapper.mapToDto(shopRepository.findById(id)
+                    .orElseThrow(RuntimeException::new));
         }
         var shop = shopRepository.findById((id))
                 .orElseThrow(RuntimeException::new);
         redisTemplate.opsForValue().setIfAbsent(String.valueOf(shop.getId()),
                 shop.getName(), Duration.ofMinutes(10));
         publishEvent(shop);
-        return shopRepository.findById(shop.getId())
-                .orElseThrow(RuntimeException::new);
+        return shopMapper.mapToDto(shopRepository.findById(shop.getId())
+                .orElseThrow(RuntimeException::new));
     }
 
     //    @EventListener
@@ -102,43 +112,32 @@ public class ShopServiceImpl implements ShopService {
     }
 
     @Override
-    public ShopEntity findByShopName(String shopName) {
-        return null;
+    public ShopResponse findByShopName(String shopName) {
+        var cacheKey = CacheNames.SHOP_CACHE.getValue()
+                .concat(shopName);
+        var value = redisTemplate.opsForValue().get(cacheKey);
+        if (redisTemplate.hasKey(cacheKey)) {
+            if (value != null) {
+                log.info("Value will get from cache");
+                return objectsMapper.convertValue(value, ShopResponse.class);
+            }
+        }
+        var shop = shopRepository.findByName(shopName)
+                .orElseThrow(ShopNotFoundException::new);
+        log.info("Value will get from db");
+        var shopDto = shopMapper.mapToDto(shop);
+        redisTemplate.opsForValue().set(cacheKey,shopDto,ttl);
+        return shopDto;
     }
 
     @Transactional
     @Override
     public ShopResponse registerShop(ShopRequest shopRequest) {
-        ShopEntity shop = new ShopEntity();
-        UserEntity owner = userRepository.findById(shopRequest.getOwnerId())
-                .orElseThrow(UserNotFoundException::new);
-        ShopResponse shopResponse = ShopResponse.builder()
-                .id(shop.getId())
-                .name(shopRequest.getName())
-                .category(shopRequest.getCategory())
-                .createdAt(shopRequest.getDateOfRegistration())
-                .isActive(true)
-                .isVerified(true)
-                .rating(shopRequest.getRating())
-                .ownerName(owner.getUsername())
-                .updatedAt(shopRequest.getDateOfRegistration())
-                .description(shopRequest.getDescription())
-                .totalCashTurnover(BigDecimal.ZERO)
-                .itemsIds(new ArrayList<>())
-                .buyersIds(new ArrayList<>())
-                .countOfSales(0)
-                .reviewCounts(0)
-                .build();
-        shop.setId(shopResponse.getId());
-        shop.setName(shopResponse.getName());
-        shop.setOwnerName(owner.getUsername());
-        shop.setRating(shopResponse.getRating());
-        shop.setCountOfSales(shop.getCountOfSales());
-        shop.setCreatedAt(LocalDateTime.now());
-        shop.setDeposit(BigDecimal.valueOf(1000.0));
-        shop.setUpdatedAt(LocalDateTime.now());
-        shop.setCountOfSales(0);
+        ShopEntity shop = shopMapper.mapToEntity(shopRequest);
+        shop.setIsActive(true);
+        shop.setIsVerified(true);
         shopRepository.save(shop);
+        ShopResponse shopResponse = shopMapper.mapToDto(shop);
         WeakReference<String> cacheKey = new WeakReference<>(CacheNames.SHOP_CACHE
                 .getValue()
                 .concat(String.valueOf(shop.getId())));
@@ -326,8 +325,6 @@ public class ShopServiceImpl implements ShopService {
     public Map<String, ShopEntity> getInformationAboutShop(String shopName) {
         Map<String,ShopEntity> shopMap = new ConcurrentHashMap<>();
 
-
-
         ShopEntity value = shopRepository.findByNameIgnoreCase(shopName)
                 .stream()
                 .filter(shopEntity -> shopEntity.getRating()>0)
@@ -346,6 +343,32 @@ public class ShopServiceImpl implements ShopService {
        redisTemplate.opsForValue().multiSet(shopMap);
         redisTemplate.expire(shopName,10,TimeUnit.MINUTES);
         return shopMap;
+    }
+
+    @Override
+    public MapShopResponse getItemsOfShop(String shopName) {
+        var cacheValue = redisTemplate.opsForValue().get(shopName);
+        if (cacheValue!=null){
+            log.info("Value was get from cache: {}",cacheValue);
+            return objectsMapper.convertValue(cacheValue, MapShopResponse.class);
+        }
+        var shop = shopRepository.findByName(shopName).orElseThrow();
+        var itemsOfShop = shopRepository.findByName(shopName)
+                .stream()
+                .map(ShopEntity::getItems)
+                .flatMap(Collection::stream)
+                .distinct()
+                .filter(Objects::nonNull)
+                .map(itemMapper::mapToDto)
+                .toList();
+        MapShopResponse mapShopResponse = MapShopResponse.builder()
+                .shopItemMap(Map.of(shopName,itemsOfShop))
+                .build();
+        redisTemplate.opsForValue().set(shopName,
+                mapShopResponse,
+                Duration.ofMinutes(10));
+        log.info("Value was get from db: {}",mapShopResponse.getShopItemMap());
+        return mapShopResponse;
     }
 
 

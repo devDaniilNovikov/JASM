@@ -9,16 +9,16 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class ControllerAdvice {
-//
-//    @ExceptionHandler(UserNotFoundException.class)
-//    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, UserNotFoundException ex){
-//        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                .body(ErrorBody.builder()
-//                        .statusCode(HttpStatus.NOT_FOUND.value())
-//                        .description(ex.getLocalizedMessage())
-//                        .path(webRequest.getContextPath())
-//                        .build());
-//    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, UserNotFoundException ex){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorBody.builder()
+                        .statusCode(HttpStatus.NOT_FOUND.value())
+                        .description(ex.getMessage())
+                        .path(webRequest.getDescription(false))
+                        .build());
+    }
 
 
 

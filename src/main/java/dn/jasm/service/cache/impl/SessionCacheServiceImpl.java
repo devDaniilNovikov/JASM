@@ -11,12 +11,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.TimeUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -89,6 +91,11 @@ public class SessionCacheServiceImpl implements SessionCacheService {
         sessionMap.put(SessionAttributes.USER_ID.getValue(),requireUser.getId());
         sessionMap.put(SessionAttributes.USERNAME.getValue(),requireUser.getUsername());
         sessionMap.put(SessionAttributes.LOGIN_TIME.getValue(),System.currentTimeMillis());
+        if(sessionMap.values()
+                .stream()
+                .anyMatch(Objects::isNull)){
+            response.setStatus(400);
+        }
         response.setStatus(200);
         Map<String,Object> updatedSession = new HashMap<>(sessionMap);
         updatedSession.remove(SessionAttributes.USERNAME.getValue());
@@ -124,7 +131,13 @@ public class SessionCacheServiceImpl implements SessionCacheService {
     public void invalidateSessions(String redisKeysPrefix,
                                    HttpServletResponse response) {
         redisKeysPrefix = SessionAttributes.REDIS_KEYS_PREFIX.getValue();
-        redisTemplate.keys(redisKeysPrefix).forEach(redisTemplate::delete);
+        var keys = redisTemplate.scan(
+                ScanOptions.scanOptions()
+                        .match(redisKeysPrefix)
+                        .count(10000)
+                        .build()
+        ).stream().collect(Collectors.toSet());
+        keys.forEach(redisTemplate::delete);
     }
 
     @Override

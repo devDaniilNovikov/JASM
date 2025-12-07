@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface ShopRepository extends JpaRepository<ShopEntity, Long> {
 
     Optional<ShopEntity> findByNameIgnoreCase(String name);
+
+    Optional<ShopEntity> findByName(String name);
 }

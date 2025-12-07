@@ -63,10 +63,10 @@ public class ShopEntity extends BasedEntity implements Serializable {
 
     private Integer reviewCounts;
 
-    @Column(nullable = false)
+//    @Column(nullable = false)
     private Boolean isVerified;
 
-    @Column(nullable = false)
+//    @Column(nullable = false)
     private Boolean isActive;
 
     @OneToMany(cascade = CascadeType.ALL,

@@ -1,10 +1,7 @@
 package dn.jasm.controller;
 
-import dn.jasm.dto.comment.CommentRequest;
-import dn.jasm.dto.comment.CommentResponse;
-import dn.jasm.dto.comment.CommentUpdateRequest;
+import dn.jasm.dto.comment.*;
 import dn.jasm.service.CommentService;
-import dn.jasm.dto.comment.ListCommentResponse;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -43,12 +40,11 @@ public class CommentController {
     @PostMapping(ADD_COMMENT)
     @ResponseStatus(HttpStatus.OK)
     public void addComment(@RequestBody CommentRequest commentRequest) {
-
         commentService.addComment(commentRequest);
     }
 
     @GetMapping(GET_COMMENTS_BY_USER)
-    public Map<String,ListCommentResponse> getCommentsOfUserByUserId(@RequestParam Long userId){
+    public MapCommentResponse getCommentsOfUserByUserId(@RequestParam Long userId){
         return commentService.getCommentsByUserId(userId);
     }
 

@@ -1,6 +1,7 @@
 package dn.jasm.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,6 +22,10 @@ public class ItemEntity extends BasedEntity {
     @JoinColumn(name = "order_id")
     @JsonBackReference("order-items")
     private OrderEntity order;
+
+    @OneToMany(mappedBy = "item",fetch = FetchType.LAZY)
+    @JsonManagedReference("item-comments")
+    private List<CommentEntity> comments;
 
     @Column(nullable = false,unique = true)
     private String name;

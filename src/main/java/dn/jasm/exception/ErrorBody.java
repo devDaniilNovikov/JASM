@@ -7,14 +7,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Builder
-public class ErrorBody {
+public record ErrorBody (@JsonProperty(value = "code")
+                         int statusCode,
+                         String description,
+                         String path){
 
-    @JsonProperty(value = "code")
-    private int statusCode;
-    private String description;
-    private String path;
 }

@@ -64,7 +64,7 @@ public class UserEntity extends BasedEntity {
 
     private Integer countOfDeals;
 
-    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,orphanRemoval = true, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @ToString.Exclude
     @BatchSize(size = BATCH_SIZE)
     @JsonManagedReference("user-comments")

@@ -1,9 +1,6 @@
 package dn.jasm.service;
 
-import dn.jasm.dto.comment.CommentRequest;
-import dn.jasm.dto.comment.CommentResponse;
-import dn.jasm.dto.comment.CommentUpdateRequest;
-import dn.jasm.dto.comment.ListCommentResponse;
+import dn.jasm.dto.comment.*;
 import dn.jasm.event.comment.CommentEvent;
 import dn.jasm.event.comment.CommentUpdatedEvent;
 
@@ -20,7 +17,7 @@ public interface CommentService {
 
     ListCommentResponse getCommentsWithPagination(int pageNumber, int pageSize);
 
-    Map<String,ListCommentResponse> getCommentsByUserId(Long userId);
+    MapCommentResponse getCommentsByUserId(Long userId);
 
     void deleteComment(Long commentId);
 

@@ -7,10 +7,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dn.jasm.configuration.aop.Loggable;
 import dn.jasm.configuration.aop.TimeResulting;
-import dn.jasm.dto.comment.CommentRequest;
-import dn.jasm.dto.comment.CommentResponse;
-import dn.jasm.dto.comment.CommentUpdateRequest;
-import dn.jasm.dto.comment.ListCommentResponse;
+import dn.jasm.configuration.redis.CacheNames;
+import dn.jasm.dto.comment.*;
 import dn.jasm.event.comment.CommentEvent;
 import dn.jasm.event.comment.CommentUpdatedEvent;
 import dn.jasm.exception.CommentNotFoundException;
@@ -27,6 +25,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +34,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,11 +46,11 @@ public class CommentServiceImpl implements CommentService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final CommentMapper commentMapper;
-    private final RedisService redisService;
+    private final RedisTemplate<String,Object> redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectsMapper;
+    private static final long CACHE_TTL = 10;
 
-    private final Map<String,ListCommentResponse> userAndComments = new HashMap<>();
 
 
     @Override
@@ -61,19 +61,30 @@ public class CommentServiceImpl implements CommentService {
         comment.setComment(commentRequest.getComment());
         comment.setRating(commentRequest.getRating());
         comment.setCreatedAt(LocalDateTime.now());
-        var userId = comment.getUser().getId();
+        var userId = commentRequest.getUserId();
         var user = userRepository.findById(userId)
                         .orElseThrow(()->new UserNotFoundException(
                                 MessageFormat.format("[User with id: {0} not found]",userId)));
-        List<CommentEntity> comments = user.getComments();
-        comments.add(comment);
         commentRepository.save(comment);
-        var commentKey = Objects.toString(comment.getId());
-        redisService.writeObjectInRedis(commentKey,comment);
-        publishEvent(comment);
+        List<CommentEntity> comments = user.getComments();
+        if (comments!=null){
+            comments = new ArrayList<>();
+            user.setComments(comments);
+        }
         comment.setUser(user);
         userRepository.save(user);
-        log.info("[User with username: {} add comment: {}]", user.getUsername(), commentRequest.getComment());
+        var cacheKey = CacheNames.COMMENT_CACHE
+                        .getValue()
+                        .concat(comment.getId().toString());
+        redisTemplate.opsForValue()
+                .set(cacheKey,
+                     comment,
+                     CACHE_TTL,
+                     TimeUnit.MINUTES);
+        publishEvent(comment);
+        log.info("[User with username: {} add comment: {}]",
+                user.getUsername(),
+                commentRequest.getComment());
 
     }
 
@@ -97,20 +108,27 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Loggable
     public CommentResponse getCommentById(Long id) {
-        String cacheKey = Objects.toString(id);
-        var comment = commentRepository.findById(id)
-                .orElseThrow(()->new CommentNotFoundException(
-                        MessageFormat.format("[Comment with id: {0} not found]",id)));
-        if (redisService.checkKeyExist(cacheKey)){
-            return commentMapper.mapToDto(comment);
+        String cacheKey = CacheNames.ITEM_CACHE
+                .getValue()
+                .concat(id.toString());
+        var value = redisTemplate.opsForValue().get(cacheKey);
+        if (value!=null){
+            cacheLogging();
+            return objectsMapper.convertValue(value, CommentResponse.class);
         }
-        try {
-            String jsonValue = objectMapper.writeValueAsString(comment);
-            redisService.writeObjectInRedis(cacheKey,jsonValue);
-        }catch (JsonProcessingException e){
-            log.error("[Cant put value in cache: {}]",comment.toString());
-        }
-        return commentMapper.mapToDto(comment);
+        dataBaseLogging();
+        return commentRepository.findById(id)
+                .stream()
+                .map(commentMapper::mapToDto)
+                .peek(commentResponse -> {
+                    redisTemplate.opsForValue()
+                            .set(cacheKey,
+                                 commentResponse,
+                                 CACHE_TTL,
+                                 TimeUnit.MINUTES);
+                })
+                .findFirst()
+                .orElseThrow(CommentNotFoundException::new);
     }
 
     @Override
@@ -118,12 +136,25 @@ public class CommentServiceImpl implements CommentService {
     public ListCommentResponse getCommentsByIds(List<Long> ids) {
         var comments = commentRepository.findAllById(ids);
         log.info("[Comments: {}]",comments.toString());
-        var keyOfComments = comments.stream()
-                .map(c->c.getId().toString())
-                .collect(Collectors.toSet());
-        Set<Object> commentValues = new HashSet<>(comments);
-            redisService.writeObjectsInRedis(keyOfComments, commentValues);
-
+        var cacheKeysOfComments = comments.stream()
+                .map(CommentEntity::getId)
+                .map(String::valueOf)
+                .map(c->CacheNames.COMMENT_CACHE
+                        .getValue()
+                        .concat(c))
+                .toList();
+        var cacheValues = redisTemplate.opsForValue().multiGet(cacheKeysOfComments);
+        cacheLogging();
+        if (cacheValues!=null && cacheValues.stream().anyMatch(Objects::nonNull)){
+            cacheLogging();
+            List<CommentResponse> commentList = cacheValues.stream()
+                    .map(comment->objectsMapper.convertValue(comment, CommentResponse.class))
+                    .toList();
+            ListCommentResponse listCommentResponse = new ListCommentResponse();
+            listCommentResponse.setComments(commentList);
+            return listCommentResponse;
+        }
+        dataBaseLogging();
         return commentMapper.mapToCommentResponseList(comments);
     }
 
@@ -132,33 +163,72 @@ public class CommentServiceImpl implements CommentService {
     @TimeResulting
     public ListCommentResponse getCommentsWithPagination(int pageNumber, int pageSize) {
         PageRequest pageRequest = PageRequest.of(pageNumber, pageSize);
-        Page<CommentEntity> commentsPage = commentRepository.findAll(pageRequest);
-        Set<CommentEntity> comments = new HashSet<>(commentsPage.getContent());
-        var commentIds = comments.stream()
-                .map(CommentEntity::getComment)
+        var comments = commentRepository.findAll(pageRequest)
+                .stream()
+                .toList();
+        var keys = comments.stream()
+                .map(CommentEntity::getId)
                 .map(String::valueOf)
-                .collect(Collectors.toSet());
-
-        if (!commentIds.isEmpty()) {
-            redisService.writeObjectsInRedis(commentIds, Collections.singleton(comments));
+                .map(c->CacheNames.COMMENT_CACHE
+                        .getValue()
+                        .concat(c))
+                .toList();
+        var cacheValues = redisTemplate.opsForValue().multiGet(keys);
+        log.info("Cache values of comments: {}",cacheValues);
+        if (cacheValues!=null && cacheValues.stream()
+                .allMatch(Objects::nonNull)) {
+            cacheLogging();
+            List<CommentResponse> commentList = cacheValues.stream()
+                    .map(c -> objectsMapper.convertValue(c, CommentResponse.class))
+                    .toList();
+            ListCommentResponse listCommentResponse = new ListCommentResponse();
+            listCommentResponse.setComments(commentList);
+            return listCommentResponse;
         }
-
-        return commentMapper.mapToDtoSet(comments);
+        dataBaseLogging();
+        comments.forEach(c->{
+            redisTemplate.opsForValue()
+                    .set(c.getId().toString(),c,CACHE_TTL,TimeUnit.MINUTES);
+        });
+        return commentMapper.mapToDtoList(comments);
     }
 
     @Override
     @TimeResulting
-    public Map<String,ListCommentResponse> getCommentsByUserId(Long userId) {
+    public MapCommentResponse getCommentsByUserId(Long userId) {
         var user = userRepository.findById(userId)
                 .filter(userEntity -> userEntity.getComments() != null)
                 .orElseThrow(RuntimeException::new);;
-        ListCommentResponse listCommentResponse = new ListCommentResponse();
-        List<CommentEntity> commentEntities = user.getComments();
-        var mappingEntityListToDto = commentMapper.mapToCommentResponseList(commentEntities);
-        listCommentResponse.setComments(mappingEntityListToDto.getComments());
-        var username = user.getUsername();
-        userAndComments.put(username,listCommentResponse);
-        return userAndComments;
+        var commentsIds = commentRepository.findAllByUserId(userId)
+                .stream()
+                .map(CommentEntity::getId)
+                .map(String::valueOf)
+                .toList();
+        var commentCacheValue = redisTemplate.opsForValue().multiGet(commentsIds);
+        log.info("Values: {}",commentCacheValue);
+        if (commentCacheValue!=null && commentCacheValue.stream().allMatch(Objects::nonNull)){
+            cacheLogging();
+            List<CommentResponse> comments = commentCacheValue.stream()
+                    .map(comment->objectsMapper.convertValue(comment, CommentResponse.class))
+                    .toList();
+            ListCommentResponse listCommentResponse = new ListCommentResponse();
+            listCommentResponse.setComments(comments);
+            MapCommentResponse commentResponseMap = new MapCommentResponse();
+            commentResponseMap.setCommentMap(Map.of(user.getUsername(), listCommentResponse));
+            return commentResponseMap;
+
+        }
+        dataBaseLogging();
+        var idsLongValues = commentsIds.stream()
+                        .map(Long::valueOf)
+                        .toList();
+        var comments = commentRepository.findAllById(idsLongValues);
+        var commentsDto = commentMapper.mapToCommentResponseList(comments);
+        MapCommentResponse commentResponseMap = new MapCommentResponse();
+        commentResponseMap.setCommentMap(Map.of(user.getUsername(),commentsDto));
+        comments.forEach(comment->redisTemplate.opsForValue()
+                .set(comment.getId().toString(), comment, CACHE_TTL, TimeUnit.MINUTES));
+        return commentResponseMap;
 
 
     }
@@ -171,8 +241,14 @@ public class CommentServiceImpl implements CommentService {
              throw new CommentNotFoundException(
                      MessageFormat.format("[Comment with id: {0} not found]",commentId));
          }
-         redisService.deleteCacheByKey(String.valueOf(commentId));
-         commentRepository.deleteById(commentId);
+         CompletableFuture.runAsync(()->redisTemplate.delete(commentId.toString()))
+                         .thenRunAsync(()->commentRepository.deleteById(commentId))
+                         .exceptionally(r->{
+                             if (r!=null){
+                                 log.error("Error in async task cause: {}",r.getMessage());
+                             }
+                             return null;
+                         });
          log.info("[Deleted comment: {}, user of comment: {}]",
                  commentForDelete.getComment(),
                  commentForDelete.getUser().getId()
@@ -190,7 +266,7 @@ public class CommentServiceImpl implements CommentService {
                         .stream()
                         .filter(Objects::nonNull)
                         .peek(commentEntity -> {
-                            redisService.deleteCacheByKey(commentIds.toString());
+                            redisTemplate.delete(commentIds.toString());
                             commentRepository.deleteAllByIdInBatch(commentIds);
                             var deletedComment = commentEntity.getComment();
                             var ownerOfComment = commentEntity.getUser().getUsername();
@@ -229,33 +305,40 @@ public class CommentServiceImpl implements CommentService {
     @EventListener
     @Loggable
     public void handleCommentCreateEvent(CommentEvent commentEvent) {
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.registerModule(new JavaTimeModule());
-            objectMapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-            String message = objectMapper.writeValueAsString(commentEvent);
+
             CompletableFuture<Void> redisFuture = CompletableFuture.runAsync(() ->
-                    redisService.writeObjectInRedis(commentEvent.getComment(), message));
+                    redisTemplate.opsForValue()
+                            .set(commentEvent.getId(),
+                                    commentEvent.getComment(),
+                                    CACHE_TTL,TimeUnit.MINUTES));
             CompletableFuture.allOf(redisFuture)
                     .exceptionally(throwable -> {
                         log.error("[Error processing comment event: {}]", throwable.getMessage());
                         return null;
                     });
-        } catch (JsonProcessingException e) {
-            log.error("[Can't serialize comment message: {}]", e.getMessage());
-        }
     }
 
     @Override
     @EventListener
     public void handleCommentUpdateEvent(CommentUpdatedEvent commentUpdatedEvent) {
-        redisService.writeObjectInRedis(
-                String.valueOf(commentUpdatedEvent.getCommentId()),
-                commentUpdatedEvent.getNewComment()
+        redisTemplate.opsForValue()
+                        .set(String.valueOf(
+                                commentUpdatedEvent.getCommentId()),
+                                commentUpdatedEvent.getNewComment(),
+                                CACHE_TTL,
+                                TimeUnit.MINUTES
         );
         log.info("[Handle Updating of comment: id: {}, new comment: {}]",
                 commentUpdatedEvent.getCommentId(),
                 commentUpdatedEvent.getNewComment()
         );
+    }
+
+    private static void cacheLogging() {
+        log.info("Value will get from cache");
+    }
+
+    private static void dataBaseLogging() {
+        log.info("Value will get from db");
     }
 }

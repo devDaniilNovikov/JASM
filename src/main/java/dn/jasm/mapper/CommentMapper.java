@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
 
@@ -25,7 +26,12 @@ public class CommentMapper {
                 .comment(commentEntity.getComment())
                 .rating(commentEntity.getRating())
                 .ownerName(commentEntity.getUser().getUsername())
-                .createdAt(commentEntity.getCreatedAt())
+                .createdAt(commentEntity.getCreatedAt().format(
+                        DateTimeFormatter.ofPattern("dd-Mm-yyyy")
+                ))
+                .updatedAt(commentEntity.getUpdatedAt().format(
+                                DateTimeFormatter.ofPattern("dd-Mm-yyyy")
+                ))
                 .build();
     }
 
@@ -44,7 +50,7 @@ public class CommentMapper {
         return commentEntity;
     }
 
-    public ListCommentResponse mapToDtoSet(Set<CommentEntity> comments){
+    public ListCommentResponse mapToDtoList(List<CommentEntity> comments){
         ListCommentResponse listCommentResponse = new ListCommentResponse();
         listCommentResponse.setComments(comments.stream()
                 .map(this::mapToDto)

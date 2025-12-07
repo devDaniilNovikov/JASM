@@ -9,6 +9,7 @@ import org.springframework.context.ApplicationEvent;
 @Setter
 public class CommentEvent extends ApplicationEvent implements BaseEvent {
 
+    private String id;
     private String comment;
     private Double rating;
     private String createdAt;
