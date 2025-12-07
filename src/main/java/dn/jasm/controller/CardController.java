@@ -18,8 +18,8 @@ public class CardController {
     private static final String DELETE_CARD = "/api/v1/cards/card/delete";
     private static final String GET_LIST_OF_CARDS = "/api/v1/cards/list";
     private static final String GET_COUNT_OF_CARDS_OF_USER = "/api/v1/cards/{userId}/count";
-    private static final String GET_CARDS_OF_USER = "/api/v1/cards/{userId}";
-//    private static final String GET_CARD_BY_ID = "/api/v1/cards/{cardId}";
+    private static final String GET_CARDS_OF_USER = "/api/v1/cards/cards-of-user/";
+    private static final String GET_CARD_BY_ID = "/api/v1/cards/{cardId}";
     private static final String DELETE_CARD_FROM_USER = "/api/v1/cards/{cardId}/delete";
 
     private final CardService cardService;
@@ -37,7 +37,7 @@ public class CardController {
         return cardService.getCardsOfUser(userId);
     }
 
-    @GetMapping("//")
+    @GetMapping(GET_CARD_BY_ID)
     @SwaggerCardAnnotation(operation = "Получение карт/ы по её уникальному идентификатору")
     public CardResponse getCardById(@PathVariable Long cardId){
         return cardService.getCardById(cardId);
