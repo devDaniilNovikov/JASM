@@ -12,10 +12,10 @@ public class CookieController {
 
     private final CookieService cookieService;
 
-    private static final String SET_COOKIES = "/api/v1/cookie/set";
-    private static final String GET_COOKIES = "/api/v1/cookie/get";
-    private static final String READ_COOKIES = "/api/v1/cookie/read";
-    private static final String DELETE_COOKIES = "/api/v1/cookie/delete";
+    private static final String SET_COOKIES = "/api/v1/cookies/set";
+    private static final String GET_COOKIES = "/api/v1/cookies/get";
+    private static final String READ_COOKIES = "/api/v1/cookies/read";
+    private static final String DELETE_COOKIES = "/api/v1/cookies/delete";
 
 
     @PostMapping(SET_COOKIES)

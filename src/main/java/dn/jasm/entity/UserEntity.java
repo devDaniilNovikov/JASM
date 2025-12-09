@@ -40,23 +40,31 @@ public class UserEntity extends BasedEntity {
     @BatchSize(size = BATCH_SIZE)
     private List<TransactionEntity> transactionEntity = new ArrayList<>();
 
-
-
     private String status;
 
-    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = {
+            CascadeType.DETACH,
+            CascadeType.PERSIST,
+            CascadeType.MERGE,
+            CascadeType.REFRESH
+    })
     @ToString.Exclude
     @BatchSize(size = BATCH_SIZE)
     @JsonManagedReference("user-orders")
     private List<OrderEntity> orders = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY)
     @ToString.Exclude
     @BatchSize(size = BATCH_SIZE)
     @JsonManagedReference("user-shops")
     private List<ShopEntity> shops = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY,cascade = {
+            CascadeType.DETACH,
+            CascadeType.PERSIST,
+            CascadeType.MERGE,
+            CascadeType.REFRESH
+    })
     @ToString.Exclude
     @BatchSize(size = BATCH_SIZE)
     @JsonManagedReference("user-cards")
@@ -64,13 +72,23 @@ public class UserEntity extends BasedEntity {
 
     private Integer countOfDeals;
 
-    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user",fetch = FetchType.LAZY, cascade = {
+            CascadeType.DETACH,
+            CascadeType.PERSIST,
+            CascadeType.MERGE,
+            CascadeType.REFRESH
+    })
     @ToString.Exclude
     @BatchSize(size = BATCH_SIZE)
     @JsonManagedReference("user-comments")
     private List<CommentEntity> comments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user",cascade = {
+            CascadeType.DETACH,
+            CascadeType.PERSIST,
+            CascadeType.MERGE,
+            CascadeType.REFRESH
+    })
     @JsonManagedReference("user-notifications")
     private List<NotificationEntity> notifications = new ArrayList<>();
 

@@ -6,7 +6,8 @@ import dn.jasm.event.CardCreateEvent;
 
 public interface CardService {
 
-     CardResponse addCard(CardRequest cardRequest, Long userId);
+     CardResponse addCard(CardRequest cardRequest,
+                          Long userId);
 
      void deleteCardFromUser(Long userId,Long cardId);
 

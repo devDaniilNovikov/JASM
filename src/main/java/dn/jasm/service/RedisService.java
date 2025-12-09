@@ -6,9 +6,11 @@ import java.util.Set;
 
 public interface RedisService {
 
-    void writeObjectInRedis(String key, Object object);
+    void writeObjectInRedis(String key,
+                            Object object);
 
-    void writeObjectsInRedis(Set<String> keys, Set<Object> objects);
+    void writeObjectsInRedis(Set<String> keys,
+                             Set<Object> objects);
 
     boolean checkKeyExist(String key);
 
@@ -16,7 +18,8 @@ public interface RedisService {
 
     void deleteCacheByKey(String key);
 
-    Object getFromCache(String key,CacheNames cacheNames);
+    Object getFromCache(String key,
+                        CacheNames cacheNames);
 
     Set<String> getKeySet(String keyPattern);
 

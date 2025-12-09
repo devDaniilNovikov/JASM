@@ -6,12 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.item.ItemRequest;
 import dn.jasm.dto.item.ItemResponse;
-import dn.jasm.dto.shop.ListShopResponse;
-import dn.jasm.dto.shop.MapShopResponse;
-import dn.jasm.dto.shop.ShopRequest;
-import dn.jasm.dto.shop.ShopResponse;
+import dn.jasm.dto.shop.*;
 import dn.jasm.entity.ShopEntity;
 import dn.jasm.entity.UserEntity;
+import dn.jasm.entity.enums.ShopStatus;
 import dn.jasm.event.shop.ShopEvent;
 import dn.jasm.exception.ItemNotFoundException;
 import dn.jasm.exception.ShopNotFoundException;
@@ -21,8 +19,10 @@ import dn.jasm.mapper.ShopMapper;
 import dn.jasm.repository.ItemRepository;
 import dn.jasm.repository.ShopRepository;
 import dn.jasm.repository.UserRepository;
+import dn.jasm.service.LogService;
 import dn.jasm.service.ShopService;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -35,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.lang.ref.WeakReference;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -55,11 +56,10 @@ public class ShopServiceImpl implements ShopService {
     private final ObjectMapper objectsMapper;
     private final ShopMapper shopMapper;
     private final ItemMapper itemMapper;
+    private final LogService logService;
 
     private static final String REDIS_KEYS_PREFIX = "*";
-
-    @Value("${spring.cache.redis.time-to-live}")
-    private Duration ttl;
+    private static final long CACHE_TTL = 10;
 
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
@@ -67,17 +67,22 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     public ShopResponse findById(Long id) {
-        if (redisTemplate.hasKey(String.valueOf(id))) {
-            return shopMapper.mapToDto(shopRepository.findById(id)
-                    .orElseThrow(RuntimeException::new));
+        var cacheKey = CacheNames.SHOP_CACHE
+                .getValue()
+                .concat(id.toString());
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            logService.cacheLog(cacheKey,cacheValue);
+            return objectsMapper.convertValue(cacheValue,ShopResponse.class);
         }
-        var shop = shopRepository.findById((id))
+        var shopFromDb = shopRepository.findById((id))
                 .orElseThrow(RuntimeException::new);
-        redisTemplate.opsForValue().setIfAbsent(String.valueOf(shop.getId()),
-                shop.getName(), Duration.ofMinutes(10));
-        publishEvent(shop);
-        return shopMapper.mapToDto(shopRepository.findById(shop.getId())
-                .orElseThrow(RuntimeException::new));
+        var shopDto = shopMapper.mapToDto(shopFromDb);
+        redisTemplate.opsForValue()
+                .setIfAbsent(String.valueOf(shopDto.getId()),
+                shopDto.getName(),Duration.ofMinutes(10));
+        logService.dbLog(shopDto.getId(),shopDto);
+        return shopDto;
     }
 
     //    @EventListener
@@ -116,17 +121,17 @@ public class ShopServiceImpl implements ShopService {
         var cacheKey = CacheNames.SHOP_CACHE.getValue()
                 .concat(shopName);
         var value = redisTemplate.opsForValue().get(cacheKey);
-        if (redisTemplate.hasKey(cacheKey)) {
-            if (value != null) {
-                log.info("Value will get from cache");
-                return objectsMapper.convertValue(value, ShopResponse.class);
-            }
+        if (value!=null){
+            logService.cacheLog(cacheKey,value);
+            return objectsMapper.convertValue(value,ShopResponse.class);
         }
-        var shop = shopRepository.findByName(shopName)
+
+        var shopFromDb = shopRepository.findByName(shopName)
                 .orElseThrow(ShopNotFoundException::new);
-        log.info("Value will get from db");
-        var shopDto = shopMapper.mapToDto(shop);
-        redisTemplate.opsForValue().set(cacheKey,shopDto,ttl);
+        var shopDto = shopMapper.mapToDto(shopFromDb);
+        logService.dbLog(shopDto.getId(),shopDto);
+        redisTemplate.opsForValue()
+                .setIfAbsent(cacheKey,shopDto,CACHE_TTL,TimeUnit.MINUTES);
         return shopDto;
     }
 
@@ -138,13 +143,16 @@ public class ShopServiceImpl implements ShopService {
         shop.setIsVerified(true);
         shopRepository.save(shop);
         ShopResponse shopResponse = shopMapper.mapToDto(shop);
-        WeakReference<String> cacheKey = new WeakReference<>(CacheNames.SHOP_CACHE
+        String cacheKey = CacheNames.SHOP_CACHE
                 .getValue()
-                .concat(String.valueOf(shop.getId())));
+                .concat(shop.getId().toString());
         var cacheValue = objectsMapper.convertValue(shopResponse, ShopResponse.class);
         redisTemplate.opsForValue()
-                .set(Objects.requireNonNull(cacheKey.get()), cacheValue, Duration.ofMinutes(10));
-        log.info("Registered shop is: {}", shopResponse);
+                .setIfAbsent(cacheKey,
+                        cacheValue,
+                        CACHE_TTL,
+                        TimeUnit.MINUTES);
+    log.info("Registered shop is: {}", shopResponse);
         return shopResponse;
 
 
@@ -152,17 +160,34 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     public void deleteShop(Long id) {
-        shopRepository.findById(id)
-                .ifPresentOrElse(
-                        s -> shopRepository.deleteById(s.getId())
-                        , () -> {
-                            throw new NoSuchElementException("Магазин не найден");
-                        });
-
+        var cacheKeyForDelete = CacheNames.SHOP_CACHE
+                .getValue()
+                .concat(id.toString());
+        CompletableFuture.runAsync(() -> shopRepository.deleteById(id))
+                .thenRunAsync(() -> redisTemplate.opsForValue().get(cacheKeyForDelete))
+                .thenRunAsync(() -> redisTemplate.delete(cacheKeyForDelete))
+                .exceptionally(r -> {
+                    if (r != null) {
+                        log.error("Error while during async operation");
+                    }
+                    return null;
+                });
     }
 
     @Override
     public Double getRatingOfShop(Long shopId) {
+        var cacheKey = CacheNames.SHOP_CACHE
+                .getValue()
+                .concat(shopId.toString());
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            logService.cacheLog(cacheKey,cacheValue);
+            return objectsMapper.convertValue(cacheValue,ShopResponse.class)
+                    .getRating()
+                    .describeConstable()
+                    .orElse(0.0);
+        }
+        logService.dbLog(shopId);
         return shopRepository.findById(shopId)
                 .stream()
                 .map(ShopEntity::getRating)
@@ -198,6 +223,28 @@ public class ShopServiceImpl implements ShopService {
         log.error("Getting shops with names: {}",shopNames);
         listShopResponse.setShops(shops);
         return listShopResponse;
+
+    }
+
+    @Override
+    public ShopResponse getBalanceOfShop(Long shopId) {
+        var cacheKey = CacheNames.SHOP_CACHE
+                .getValue()
+                .concat(shopId.toString());
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            var balanceOfShop = objectsMapper.convertValue(cacheValue,ShopResponse.class).getDeposit();
+            return ShopResponse.builder()
+                    .deposit(balanceOfShop)
+                    .build();
+        }
+        var balance =  shopRepository.findById(shopId)
+                .map(ShopEntity::getDeposit)
+                .stream()
+                .reduce(BigDecimal.ZERO,BigDecimal::add);
+        return ShopResponse.builder()
+                .deposit(balance)
+                .build();
 
     }
 
@@ -322,27 +369,62 @@ public class ShopServiceImpl implements ShopService {
     }
 
     @Override
-    public Map<String, ShopEntity> getInformationAboutShop(String shopName) {
-        Map<String,ShopEntity> shopMap = new ConcurrentHashMap<>();
+    public MapShopResponse getInformationAboutShop(String shopName) {
+        String cacheKey = CacheNames.SHOP_CACHE
+                .getValue()
+                .concat(shopName);
+        Set<String> cacheKeys = scanKeys(cacheKey + REDIS_KEYS_PREFIX);
+        List<Object> redisKeys = redisBatchGet(new ArrayList<>(cacheKeys));
+        if (!redisKeys.isEmpty()) {
+            logService.cacheLog(redisKeys);
+            Map<String, List<ShopEntity>> shopMap = new ConcurrentHashMap<>();
+            for (Object values : redisKeys) {
+                if (values != null) {
+                    List<ShopEntity> shops = objectsMapper.convertValue(
+                            values,
+                            new TypeReference<>() {
+                            });
+                    if (!shops.isEmpty()) {
+                        String shopName_ = shops.get(0).getName();
+                        shopMap.put(shopName_, shops);
+                    }
+                }
+            }
+            if (!shopMap.isEmpty()) {
+                MapShopResponse mapShopResponse = new MapShopResponse();
+                mapShopResponse.setShopMap(shopMap);
+                return mapShopResponse;
+            }
 
-        ShopEntity value = shopRepository.findByNameIgnoreCase(shopName)
+        }
+
+        Map<String, List<ShopEntity>> shopMap = shopRepository.findByNameIgnoreCase(shopName)
                 .stream()
-                .filter(shopEntity -> shopEntity.getRating()>0)
+                .filter(shopEntity -> shopEntity.getRating() > 0)
                 .collect(Collectors.groupingBy(
                         ShopEntity::getName,
-                        Collectors.filtering(s->s.getOwnerName()!=null,
+                        Collectors.filtering(s -> s.getOwnerName() != null,
                                 Collectors.toList())
 
                 ))
-                .values()
+                .entrySet()
                 .stream()
-                .flatMap(Collection::stream)
-                .findAny()
-                .orElseThrow(RuntimeException::new);
-        shopMap.computeIfAbsent(shopName,v->value);
-       redisTemplate.opsForValue().multiSet(shopMap);
-        redisTemplate.expire(shopName,10,TimeUnit.MINUTES);
-        return shopMap;
+                .peek(map -> {
+                    var redisKey = cacheKey.concat(map.getKey());
+                    var redisValue = map.getValue();
+                    redisTemplate.opsForValue().setIfAbsent(
+                            redisKey, redisValue, CACHE_TTL, TimeUnit.MINUTES
+                    );
+                })
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue));
+        if (!shopMap.isEmpty()) {
+            MapShopResponse mapShopResponse = new MapShopResponse();
+            mapShopResponse.setShopMap(shopMap);
+            return mapShopResponse;
+        }
+        return null;
     }
 
     @Override
@@ -371,11 +453,92 @@ public class ShopServiceImpl implements ShopService {
         return mapShopResponse;
     }
 
+    @Override
+    public ShopResponse getOwnerOfShop(Long shopId) {
+        var cacheKey = CacheNames.SHOP_CACHE
+                .getValue()
+                .concat(shopId.toString());
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            logService.cacheLog(cacheKey,cacheValue);
+            String ownerName =  objectsMapper.convertValue(cacheValue,ShopResponse.class).getOwnerName();
+            return ShopResponse.builder()
+                    .ownerName(ownerName)
+                    .build();
+        }
+        var ownerName = shopRepository.findById(shopId)
+                .stream()
+                .map(shop-> shop.getUser().getUsername())
+                .findFirst()
+                .orElseThrow(UserNotFoundException::new);
+        return ShopResponse.builder()
+                .ownerName(ownerName)
+                .build();
+    }
+
+    @Override
+    public ShopResponse banShop(Long shopId) {
+        var updatedShop = shopRepository.findById(shopId)
+                .stream()
+                .peek(shopEntity -> {
+                     shopEntity.setStatus(ShopStatus.BANNED);
+                     log.info("Updated shop status: {}",shopEntity.getStatus().name());
+                     shopRepository.save(shopEntity);
+                })
+                .map(shopMapper::mapToDto)
+                .findFirst()
+                .orElseThrow(ShopNotFoundException::new);
+        return ShopResponse.builder()
+                .shopStatus(updatedShop.getShopStatus())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void updateShop(Long shopId, ShopUpdateRequest shopUpdateRequest) {
+        var cacheKey = CacheNames.SHOP_CACHE
+                        .getValue()
+                        .concat(shopId.toString());
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            var shopForUpdate = objectsMapper.convertValue(cacheValue,ShopEntity.class);
+            shopForUpdate.setName(shopUpdateRequest.getName());
+            shopForUpdate.setCategory(shopUpdateRequest.getCategory());
+            shopForUpdate.setDeposit(shopUpdateRequest.getDeposit());
+            shopForUpdate.setDescription(shopUpdateRequest.getDescription());
+            shopForUpdate.setUpdatedAt(LocalDateTime.parse(
+                    shopUpdateRequest.getDateOfUpdate()
+            ));
+            shopRepository.save(shopForUpdate);
+            log.info("Updated shop with id: {}",shopForUpdate.getId());
+        }
+
+        shopRepository.findById(shopId)
+                .ifPresentOrElse(shopEntity -> {
+                    shopEntity.setName(shopUpdateRequest.getName());
+                    shopEntity.setCategory(shopUpdateRequest.getCategory());
+                    shopEntity.setDeposit(shopUpdateRequest.getDeposit());
+                    shopEntity.setUser(
+                            userRepository.findById(shopUpdateRequest.getOwnerId())
+                                    .orElseThrow(UserNotFoundException::new)
+                    );
+                    shopEntity.setOwnerName(shopEntity.getUser().getUsername());
+                    shopEntity.setUpdatedAt(LocalDateTime.parse(
+                            shopUpdateRequest.getDateOfUpdate()
+                    ));
+                    shopRepository.save(shopEntity);
+                },()->{
+                    throw new ShopNotFoundException(MessageFormat.format(
+                            "Shop with id: {0} not found",shopId));
+                });
+    }
+
 
     private void redisBatchDelete(List<String> shopIds) {
         if (shopIds.isEmpty()){
             throw new IllegalArgumentException("Id's can't be null");
         }
+        redisTemplate.multi();
         redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
             for (String key : shopIds) {
                 connection.openPipeline();
@@ -386,6 +549,7 @@ public class ShopServiceImpl implements ShopService {
         });
     }
     private List<Object> redisBatchGet(List<String> keys){
+        redisTemplate.multi();
         return redisTemplate.executePipelined((RedisCallback<Object>) redis->{
             for (String key: keys){
                 redis.stringCommands().get(key.getBytes());

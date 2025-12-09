@@ -6,6 +6,7 @@ import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
 import dn.jasm.exception.UserNotFoundException;
+import dn.jasm.service.LogService;
 import dn.jasm.service.cache.UserCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class UserCacheServiceImpl implements UserCacheService  {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectsMapper;
+    private final LogService logService;
 
     @Value("${spring.cache.redis.time-to-live}")
     private Duration TTL;
@@ -43,7 +45,9 @@ public class UserCacheServiceImpl implements UserCacheService  {
                 .concat(id);
         var value = redisTemplate.opsForValue().get(cacheKey);
         if (value!=null){
-            log.info("Element will put in cache: {}",value);
+            logService.cacheLog(
+                    cacheKey,value
+            );
             return objectsMapper.convertValue(value, UserResponse.class);
         }
         return null;

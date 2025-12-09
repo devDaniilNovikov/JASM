@@ -6,10 +6,12 @@ import dn.jasm.service.UserService;
 import dn.jasm.service.scheduling.UserScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,6 +23,7 @@ public class UserSchedulerImpl implements UserScheduler {
     private final UserRepository userRepository;
     private final UserService userService;
     private final RedisTemplate<String,String> redisTemplate;
+    private static final String REDIS_KEY_PREFIX = "*";
 
     @Override
     @Transactional
@@ -69,7 +72,13 @@ public class UserSchedulerImpl implements UserScheduler {
     @Scheduled(cron = "0 0 0 * * *")
     @Override
     public void cleanCache(){
-        Set<String> keys = Objects.requireNonNull(redisTemplate.keys("*"));
+        Set<String> keys = Objects.requireNonNull(redisTemplate.scan(
+                ScanOptions.scanOptions()
+                        .count(100)
+                        .match(REDIS_KEY_PREFIX.getBytes(StandardCharsets.UTF_8))
+                        .build()))
+                        .stream()
+                        .collect(Collectors.toSet());
         keys.forEach(key -> {
                     redisTemplate.delete(key);
                     log.info("Deleted keys with unexpected key: {}", key);

@@ -1,10 +1,10 @@
 package dn.jasm.service;
 
-import dn.jasm.dto.shop.ListShopResponse;
-import dn.jasm.dto.shop.MapShopResponse;
-import dn.jasm.dto.shop.ShopRequest;
-import dn.jasm.dto.shop.ShopResponse;
+import dn.jasm.dto.shop.*;
 import dn.jasm.entity.ShopEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
@@ -26,13 +26,24 @@ public interface ShopService {
     ListShopResponse getListOfShops(int pageNumber,
                                     int pageSize);
 
+    ShopResponse getBalanceOfShop(Long shopId);
+
     MapShopResponse getSortedRatingsOfShops();
 
     void deleteByIds(List<Long> shopIds);
 
-    Map<String,ShopEntity> getInformationAboutShop(String shopName);
+    MapShopResponse getInformationAboutShop(String shopName);
 
     MapShopResponse getItemsOfShop(String shopName);
+
+    ShopResponse getOwnerOfShop(Long shopId);
+
+    ShopResponse banShop(Long shopId);
+
+    void updateShop(Long shopId,
+                    ShopUpdateRequest shopUpdateRequest);
+
+
 
 
 

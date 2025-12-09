@@ -3,6 +3,7 @@ package dn.jasm.entity;
 
 import com.fasterxml.jackson.annotation.*;
 import dn.jasm.dto.payment.PaymentResponse;
+import dn.jasm.entity.enums.ShopStatus;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
@@ -37,7 +38,7 @@ public class ShopEntity extends BasedEntity implements Serializable {
 
     private Integer countOfSales;
 
-    @Column(unique = true,nullable = false)
+    @Column(nullable = false)
     private String ownerName;
 
     @OneToMany(cascade = CascadeType.ALL,
@@ -62,6 +63,10 @@ public class ShopEntity extends BasedEntity implements Serializable {
     private Integer totalCountOfProducts;
 
     private Integer reviewCounts;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "shop_status")
+    private ShopStatus status;
 
 //    @Column(nullable = false)
     private Boolean isVerified;

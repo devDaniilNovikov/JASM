@@ -13,17 +13,21 @@ public interface TransactionService {
 
     TransactionDto getTransactionById(Long txId);
 
-    void createTransaction(Long userId,Long orderId,Long cardId);
+    void createTransaction(Long userId,
+                           Long orderId,
+                           Long cardId);
 
     void cancelTransaction(Long txId);
 
     void cancelMultipleTransactions(List<Long> txIds);
 
-    SetTransactionDto getTransactionSet(int pageNumber, int pageSize);
+    SetTransactionDto getTransactionSet(int pageNumber,
+                                        int pageSize);
 
     void deleteTransaction(Long txId);
 
-    void validateTransactionBalance(UserEntity user, OrderEntity order);
+    void validateTransactionBalance(UserEntity user,
+                                    OrderEntity order);
 
     void handleTransactionEvent(TransactionEvent transactionEvent);
 

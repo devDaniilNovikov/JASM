@@ -12,7 +12,8 @@ public interface TicketService {
 
     void createTicket(TicketEntity ticketEntity);
 
-    MapTicketDto getTicketForOrder(Long orderId, String ticketId);
+    MapTicketDto getTicketForOrder(Long orderId,
+                                   String ticketId);
 
     byte[] writeTicketOnPfd(HttpServletResponse httpServletResponse);
 

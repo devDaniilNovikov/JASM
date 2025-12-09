@@ -111,12 +111,11 @@ public class CommentServiceImpl implements CommentService {
         String cacheKey = CacheNames.ITEM_CACHE
                 .getValue()
                 .concat(id.toString());
-        var value = redisTemplate.opsForValue().get(cacheKey);
-        if (value!=null){
-            cacheLogging();
-            return objectsMapper.convertValue(value, CommentResponse.class);
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            cacheLogging(cacheValue);
+            return objectsMapper.convertValue(cacheValue, CommentResponse.class);
         }
-        dataBaseLogging();
         return commentRepository.findById(id)
                 .stream()
                 .map(commentMapper::mapToDto)
@@ -126,6 +125,7 @@ public class CommentServiceImpl implements CommentService {
                                  commentResponse,
                                  CACHE_TTL,
                                  TimeUnit.MINUTES);
+                    dataBaseLogging(commentResponse);
                 })
                 .findFirst()
                 .orElseThrow(CommentNotFoundException::new);
@@ -135,7 +135,7 @@ public class CommentServiceImpl implements CommentService {
     @Loggable
     public ListCommentResponse getCommentsByIds(List<Long> ids) {
         var comments = commentRepository.findAllById(ids);
-        log.info("[Comments: {}]",comments.toString());
+        log.info("[Comments: {}]",comments );
         var cacheKeysOfComments = comments.stream()
                 .map(CommentEntity::getId)
                 .map(String::valueOf)
@@ -144,17 +144,16 @@ public class CommentServiceImpl implements CommentService {
                         .concat(c))
                 .toList();
         var cacheValues = redisTemplate.opsForValue().multiGet(cacheKeysOfComments);
-        cacheLogging();
         if (cacheValues!=null && cacheValues.stream().anyMatch(Objects::nonNull)){
-            cacheLogging();
             List<CommentResponse> commentList = cacheValues.stream()
                     .map(comment->objectsMapper.convertValue(comment, CommentResponse.class))
                     .toList();
             ListCommentResponse listCommentResponse = new ListCommentResponse();
             listCommentResponse.setComments(commentList);
+            cacheLogging(cacheValues);
             return listCommentResponse;
         }
-        dataBaseLogging();
+        dataBaseLogging(comments);
         return commentMapper.mapToCommentResponseList(comments);
     }
 
@@ -177,19 +176,19 @@ public class CommentServiceImpl implements CommentService {
         log.info("Cache values of comments: {}",cacheValues);
         if (cacheValues!=null && cacheValues.stream()
                 .allMatch(Objects::nonNull)) {
-            cacheLogging();
             List<CommentResponse> commentList = cacheValues.stream()
                     .map(c -> objectsMapper.convertValue(c, CommentResponse.class))
                     .toList();
             ListCommentResponse listCommentResponse = new ListCommentResponse();
             listCommentResponse.setComments(commentList);
+            cacheLogging(cacheValues);
             return listCommentResponse;
         }
-        dataBaseLogging();
         comments.forEach(c->{
             redisTemplate.opsForValue()
                     .set(c.getId().toString(),c,CACHE_TTL,TimeUnit.MINUTES);
         });
+        dataBaseLogging(comments);
         return commentMapper.mapToDtoList(comments);
     }
 
@@ -205,9 +204,8 @@ public class CommentServiceImpl implements CommentService {
                 .map(String::valueOf)
                 .toList();
         var commentCacheValue = redisTemplate.opsForValue().multiGet(commentsIds);
-        log.info("Values: {}",commentCacheValue);
-        if (commentCacheValue!=null && commentCacheValue.stream().allMatch(Objects::nonNull)){
-            cacheLogging();
+        if (commentCacheValue!=null && commentCacheValue.stream()
+                .allMatch(Objects::nonNull)){
             List<CommentResponse> comments = commentCacheValue.stream()
                     .map(comment->objectsMapper.convertValue(comment, CommentResponse.class))
                     .toList();
@@ -215,10 +213,10 @@ public class CommentServiceImpl implements CommentService {
             listCommentResponse.setComments(comments);
             MapCommentResponse commentResponseMap = new MapCommentResponse();
             commentResponseMap.setCommentMap(Map.of(user.getUsername(), listCommentResponse));
+            cacheLogging(commentCacheValue);
             return commentResponseMap;
 
         }
-        dataBaseLogging();
         var idsLongValues = commentsIds.stream()
                         .map(Long::valueOf)
                         .toList();
@@ -228,6 +226,7 @@ public class CommentServiceImpl implements CommentService {
         commentResponseMap.setCommentMap(Map.of(user.getUsername(),commentsDto));
         comments.forEach(comment->redisTemplate.opsForValue()
                 .set(comment.getId().toString(), comment, CACHE_TTL, TimeUnit.MINUTES));
+        dataBaseLogging(comments);
         return commentResponseMap;
 
 
@@ -284,7 +283,7 @@ public class CommentServiceImpl implements CommentService {
         commentRepository.findById(commentId)
                 .stream()
                 .peek(commentEntity -> {
-                    commentEntity.setComment(commentUpdateRequest.getCommentContent());
+                    commentEntity.setComment(commentUpdateRequest.getText());
                     commentEntity.setUpdatedAt(LocalDateTime.now());
                     commentEntity.setUser(user);
                     commentRepository.save(commentEntity);
@@ -305,7 +304,6 @@ public class CommentServiceImpl implements CommentService {
     @EventListener
     @Loggable
     public void handleCommentCreateEvent(CommentEvent commentEvent) {
-
             CompletableFuture<Void> redisFuture = CompletableFuture.runAsync(() ->
                     redisTemplate.opsForValue()
                             .set(commentEvent.getId(),
@@ -334,11 +332,11 @@ public class CommentServiceImpl implements CommentService {
         );
     }
 
-    private static void cacheLogging() {
-        log.info("Value will get from cache");
+    private static void cacheLogging(Object element) {
+        log.info("[Value: {} will get from cache]",element);
     }
 
-    private static void dataBaseLogging() {
-        log.info("Value will get from db");
+    private static void dataBaseLogging(Object element) {
+        log.info("[Value: {} will get from db]",element);
     }
 }

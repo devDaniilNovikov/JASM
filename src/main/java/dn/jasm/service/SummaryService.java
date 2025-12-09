@@ -9,5 +9,7 @@ import java.util.Set;
 
 public interface SummaryService {
 
-    Summary get(long userId, Set<OrderStatus> orderStatuses, Set<PaymentStatus> paymentStatuses);
+    Summary get(long userId,
+                Set<OrderStatus> orderStatuses,
+                Set<PaymentStatus> paymentStatuses);
 }

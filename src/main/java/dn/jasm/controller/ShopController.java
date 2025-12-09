@@ -1,9 +1,6 @@
 package dn.jasm.controller;
 
-import dn.jasm.dto.shop.ListShopResponse;
-import dn.jasm.dto.shop.MapShopResponse;
-import dn.jasm.dto.shop.ShopRequest;
-import dn.jasm.dto.shop.ShopResponse;
+import dn.jasm.dto.shop.*;
 import dn.jasm.entity.ShopEntity;
 import dn.jasm.service.ShopService;
 import lombok.RequiredArgsConstructor;
@@ -29,38 +26,80 @@ public class ShopController {
     private static final String BAN_SHOP = "/api/v1/shops/shop/ban";
     private static final String GET_SHOP_BY_ID = "/api/v1/shops/shop/{id}";
     private static final String GET_OWNER_OF_SHOP = "/api/v1/shops/shop/{shopId}/owner";
-    private static final String UPDATE_SHOP = "/api/v1/shops/shop/update/{shopId}";
+    private static final String UPDATE_SHOP = "/api/v1/shops/shop/{shopId}/update";
     private static final String FIND_SHOP_BY_SHOP_NAME = "/api/v1/shops/shop/name";
     private static final String GET_SHOP_BALANCE_TO_OWNER = "/api/v1/shops/shop/{shopId}/balance";
     private static final String DELETE_SHOPS_BY_IDS = "/api/v1/shops/delete";
+    private static final String GET_INFO_ABOUT_SHOP = "/api/v1/shops/shop/info";
+    private static final String GET_ITEMS_OF_SHOP = "/api/v1/shops/items";
+    private static final String GET_RATING_OF_SHOP = "/api/v1/shops/shop/{id}/rating";
 
     @GetMapping(value = GET_SHOP_LIST)
+    @ResponseStatus(value = HttpStatus.OK)
     public ListShopResponse getShopList(@RequestParam int pageNumber,
                                         @RequestParam int pageSize){
         return shopService.getListOfShops(pageNumber,pageSize);
     }
 
+    @GetMapping(GET_SHOP_BALANCE_TO_OWNER)
+    public ShopResponse getBalanceOfShop(@PathVariable Long shopId){
+        return shopService.getBalanceOfShop(shopId);
+    }
+
+    @PatchMapping(UPDATE_SHOP)
+    @ResponseStatus(HttpStatus.UPGRADE_REQUIRED)
+    public void updateShop(@PathVariable Long shopId,
+                           @RequestBody ShopUpdateRequest shopUpdateRequest){
+        shopService.updateShop(shopId,shopUpdateRequest);
+    }
+
+    @GetMapping(GET_OWNER_OF_SHOP)
+    @ResponseStatus(HttpStatus.OK)
+    public ShopResponse getOwnerOfShop(@PathVariable Long shopId){
+        return shopService.getOwnerOfShop(shopId);
+    }
+
+    @PatchMapping(BAN_SHOP)
+    @ResponseStatus(HttpStatus.OK)
+    public ShopResponse banShop(@RequestParam Long shopId){
+        return shopService.banShop(shopId);
+    }
+
+
+
+
+    @GetMapping(GET_RATING_OF_SHOP)
+    @ResponseStatus(HttpStatus.OK)
+    public Double getRatingOfShop(@PathVariable Long id){
+        return shopService.getRatingOfShop(id);
+    }
+
     @GetMapping(GET_SHOP_BY_ID)
+    @ResponseStatus(value = HttpStatus.OK)
     public ShopResponse getShopById(@PathVariable Long id){
         return shopService.findById(id);
     }
 
     @PostMapping(REGISTER_SHOP)
+    @ResponseStatus(value = HttpStatus.CREATED)
     public ShopResponse registerShop(@RequestBody ShopRequest shopRequest){
         return shopService.registerShop(shopRequest);
     }
 
-    @GetMapping("/api/v1/shops/items")
+    @GetMapping(GET_ITEMS_OF_SHOP)
+    @ResponseStatus(value = HttpStatus.OK)
     public MapShopResponse getItemsOfShop(@RequestParam String shopName){
         return shopService.getItemsOfShop(shopName);
     }
 
     @GetMapping(FIND_SHOP_BY_SHOP_NAME)
+    @ResponseStatus(value = HttpStatus.OK)
     public ShopResponse getShopByName(@RequestParam String shopName){
         return shopService.findByShopName(shopName);
     }
 
     @GetMapping(GET_SHOP_INFO)
+    @ResponseStatus(value = HttpStatus.OK)
     public MapShopResponse getSortedRatingsOfShops(){
         return shopService.getSortedRatingsOfShops();
     }
@@ -77,9 +116,8 @@ public class ShopController {
         shopService.deleteShop(id);
     }
 
-    @GetMapping("/api/v1/shops/shop/info")
-    public Map<String, ShopEntity> getInformationAboutShop(
-            @RequestParam(value = "shopName") String shopName){
+    @GetMapping(GET_INFO_ABOUT_SHOP)
+    public MapShopResponse getInformationAboutShop(String shopName){
         return shopService.getInformationAboutShop(shopName);
     }
 

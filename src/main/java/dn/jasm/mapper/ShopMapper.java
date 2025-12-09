@@ -29,6 +29,7 @@ public class ShopMapper {
         UserEntity owner = userRepository.findById(shopRequest.getOwnerId())
                 .orElseThrow(UserNotFoundException::new);
         shop.setId(shop.getId());
+        shop.setUser(owner);
         shop.setName(shopRequest.getName());
         shop.setOwnerName(owner.getUsername());
         shop.setRating(shopRequest.getRating());
@@ -49,7 +50,8 @@ public class ShopMapper {
                 .isActive(true)
                 .isVerified(true)
                 .rating(shop.getRating())
-                .ownerName(shop.getOwnerName())
+                .shopStatus(shop.getStatus().name())
+                .ownerName(shop.getUser().getUsername())
                 .updatedAt(shop.getCreatedAt()
                         .format(DateTimeFormatter.ofPattern(DATE_PATTERN)))
                 .description(shop.getDescription())

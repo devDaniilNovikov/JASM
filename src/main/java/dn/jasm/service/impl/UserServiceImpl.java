@@ -5,6 +5,7 @@ import dn.jasm.configuration.aop.TimeResulting;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.configuration.redis.RedisLockManager;
 import dn.jasm.dto.card.CardResponse;
+import dn.jasm.dto.order.OrderResponse;
 import dn.jasm.dto.user.UserRequest;
 import dn.jasm.dto.user.UserResponse;
 import dn.jasm.dto.user.UserResponseList;
@@ -17,6 +18,7 @@ import dn.jasm.exception.UserNotFoundException;
 import dn.jasm.mapper.CardMapper;
 import dn.jasm.mapper.UserMapper;
 import dn.jasm.repository.*;
+import dn.jasm.service.LogService;
 import dn.jasm.service.RedisService;
 import dn.jasm.entity.enums.UserStatus;
 import dn.jasm.event.user.UserUpdateEvent;
@@ -48,7 +50,7 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService { //TODO: FIX CACHE
 
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
@@ -65,23 +67,28 @@ public class UserServiceImpl implements UserService {
     private final ThreadFactory threadFactory;
     private final UserCacheService userCacheService;
     private final ObjectMapper objectsMapper;
-
-
+    private static final long CACHE_TTL = 10;
+    private final LogService logService;
+    private final ExecutorService executorService = Executors.newFixedThreadPool(100);
 
 
 
     @Override
     public UserResponse findByPhoneNumber(String phoneNumber) {
-        String key = CacheNames.USER_CACHE.name()+phoneNumber;
-        Object value = redisTemplate.opsForValue().get(key);
-        if (value!=null){
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.registerModule(new JavaTimeModule());
-            return objectMapper.convertValue(value, UserResponse.class);
+        String cacheKey = CacheNames.USER_CACHE.name()
+                .concat(phoneNumber);
+        Object cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            logService.cacheLog(cacheKey,cacheValue);
+            return objectsMapper.convertValue(cacheValue, UserResponse.class);
         }
         var user = userRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(UserNotFoundException::new);
-        return userMapper.mapToDto(user);
+        var userDto = userMapper.mapToDto(user);
+        redisTemplate.opsForValue()
+                .set(cacheKey,userDto,CACHE_TTL,TimeUnit.MINUTES);
+        logService.dbLog(phoneNumber,user);
+        return userDto;
 
     }
 
@@ -90,37 +97,46 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse findByUsername(String username) {
-        String key = CacheNames.USER_CACHE.name()+username;
-        Object value = redisTemplate.opsForValue().get(key);
-        if (value!=null){
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.registerModule(new JavaTimeModule());
-            log.info("[Value was get from cache!]");
-            return objectMapper.convertValue(value, UserResponse.class);
+        String cacheKey = CacheNames.USER_CACHE.getValue()
+                .concat(username);
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            logService.cacheLog(cacheKey,cacheValue);
+            return objectsMapper.convertValue(cacheValue, UserResponse.class);
         }
         UserEntity userEntity = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(
                         MessageFormat.format("[User with username: {0} not found]", username)));
         var response = userMapper.mapToDto(userEntity);
-        redisTemplate.opsForValue().set(key,response,Duration.ofMinutes(15));
+        redisTemplate.opsForValue()
+                .set(cacheKey,response,CACHE_TTL,TimeUnit.MINUTES);
+        logService.dbLog(response.getId(),response);
         return response;
     }
 
     @Override
     @TimeResulting
-    @SneakyThrows
     public UserResponse findById(Long id) {
-        var cache = userCacheService.getValueFromCache(String.valueOf(id));
-        if (cache!=null){
-            log.info("Cache was get from redis");
-            return cache;
+        var cacheKey = CacheNames.USER_CACHE.getValue()
+                .concat(id.toString());
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            logService.cacheLog(cacheKey,cacheValue);
+            return objectsMapper.convertValue(cacheValue, UserResponse.class);
         }
-        UserEntity userEntity =  userRepository.findById(id)
+        UserEntity userFromDb = userRepository.findById(id)
                 .orElseThrow(()->new UserNotFoundException(
                         MessageFormat.format("[User with id: {0} not found]",id)));
-        var userDto = userMapper.mapToDto(userEntity);
-        userCacheService.putToCache(String.valueOf(id),userDto);
-        log.info("[Value was getting from db]");
+        var userDto = userMapper.mapToDto(userFromDb);
+        redisTemplate.opsForValue()
+                        .set(CacheNames.USER_CACHE
+                               .getValue()
+                               .concat(userDto.getId()
+                               .toString()),
+                                userDto,
+                                CACHE_TTL,
+                                TimeUnit.MINUTES);
+        logService.dbLog(userDto,userDto.getId());
         return userDto;
     }
 
@@ -128,17 +144,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponseList findAllWithPagination(int pageNumber, int pageSize) {
         List<UserEntity> users = userRepository.findAll(
-               PageRequest.of(pageNumber, pageSize))
-                .getContent();
+               PageRequest.of(pageNumber, pageSize)
+                ).getContent();
         Set<String> keys = users.stream()
-                .map(UserEntity::getId)
-                .map(String::valueOf)
+                .map(user->{
+                    var userId = user.getId();
+                    return String.valueOf(userId);
+                })
                 .collect(Collectors.toSet());
-        UserResponseList userResponseList = userCacheService.getValuesFromCache(keys);
-        if (userResponseList!=null){
-            log.info("Value was get from cache!");
-            return userResponseList;
-        }
         return userMapper.mapToDtoList(users);
     }
 
@@ -150,30 +163,39 @@ public class UserServiceImpl implements UserService {
         if (ids.isEmpty()) {
             throw new IllegalArgumentException("[Ids is empty or null!]");
         }
-
         Set<String> cacheKeys = ids.stream()
                 .map(String::valueOf)
                 .map(key->CacheNames.USER_CACHE.getValue()+key)
                 .collect(Collectors.toSet());
-        UserResponseList userResponseList = userCacheService.getValuesFromCache(cacheKeys);
-        if (userResponseList != null) {
-            log.info("Value was getFromCache");
+        var redisValues = redisTemplate.opsForValue().multiGet(cacheKeys);
+        if (redisValues!=null && redisValues.stream()
+                .allMatch(Objects::nonNull)){
+            logService.cacheLog(cacheKeys,redisValues);
+            List<UserResponse> users = redisValues.stream()
+                    .map(user->objectsMapper.convertValue(user,UserResponse.class))
+                    .toList();
+            UserResponseList userResponseList = new UserResponseList();
+            userResponseList.setUsers(users);
             return userResponseList;
         }
-        List<UserEntity> users = userRepository.findAllById(ids)
-                .stream()
-                .filter(user -> user.getId() != null)
-                .toList();
-        userCacheService.putValuesToCache(
-                cacheKeys.stream()
-                        .toList(),
-                Collections.singletonList(
-                        users.stream()
-                        .toString())
-        );
-        log.info("Value was get from db");
-        return userMapper.mapToDtoList(users);
-        }
+        List<UserResponse> users = userRepository.findAllById(ids)
+                        .stream()
+                        .map(userMapper::mapToDto)
+                       .toList();
+        users.forEach(user->redisTemplate.opsForValue()
+                .setIfAbsent(
+                        CacheNames.USER_CACHE
+                                .getValue()
+                                .concat(user.getId().toString()),
+                        user,
+                        CACHE_TTL,
+                        TimeUnit.MINUTES
+                ));
+        UserResponseList userResponseList = new UserResponseList();
+        userResponseList.setUsers(users);
+        logService.dbLog(ids,users);
+        return userResponseList;
+    }
 
 
     @Override
@@ -195,7 +217,8 @@ public class UserServiceImpl implements UserService {
             userRepository.save(user);
             var mappedUser = userMapper.mapToDto(user);
             var key = mappedUser.getId().toString();
-            userCacheService.putToCache(key,mappedUser);
+            redisTemplate.opsForValue()
+                            .setIfAbsent(key,mappedUser,CACHE_TTL,TimeUnit.MINUTES);
             updateBalanceOfUser(user.getId(), BigDecimal.valueOf(1000.1));
             publishEvent(user);
             return mappedUser;
@@ -239,9 +262,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse updateUser(Long id, UserRequest userRequest) {
-        var response = userCacheService.getValueFromCache(String.valueOf(id));
+        var response = redisTemplate.opsForValue().get(id.toString());
         if (response!=null){
-            return response;
+            logService.cacheLog(id,response);
+            return objectsMapper.convertValue(response,UserResponse.class);
         }
         else {
             var userEntity = userRepository.findById(id)
@@ -249,11 +273,13 @@ public class UserServiceImpl implements UserService {
                         isSuccessfulValid(userRequest, user);
                         user.setUpdatedAt(LocalDateTime.now());
                         userRepository.save(user);
-                        ObjectMapper objectMapper = new ObjectMapper();
-                        objectMapper.registerModule(new JavaTimeModule());
                         var userDto = userMapper.mapToDto(user);
                         var cacheKey = userDto.getId().toString();
-                        userCacheService.putToCache(cacheKey,userDto);
+                        redisTemplate.opsForValue()
+                                        .setIfAbsent(cacheKey,
+                                                userDto,
+                                                CACHE_TTL,
+                                                TimeUnit.MINUTES);
                         eventPublisher.publishEvent(new UserUpdateEvent(
                                 this,
                                 user.getUsername(),
@@ -356,9 +382,13 @@ public class UserServiceImpl implements UserService {
             throw new UserNotFoundException(
                     MessageFormat.format("[User not found for order with id: {0} ]",orderId));
         }
-        String cacheKey = user.getId().toString();
-        if (!redisService.checkKeyExist(cacheKey)) {
-            redisService.writeObjectInRedis(cacheKey, user);
+        String cacheKey = CacheNames.ORDER_CACHE
+                        .getValue()
+                        .concat(orderId.toString());
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
+        if (cacheValue!=null){
+            logService.cacheLog(cacheKey,cacheValue);
+            return objectsMapper.convertValue(cacheValue, UserResponse.class);
         }
         Map<String, Object> userMap = new HashMap<>();
         userMap.put(user.getId().toString(), user.getUsername());
@@ -465,15 +495,15 @@ public class UserServiceImpl implements UserService {
                          .flatMap(Collection::stream)
                          .map(TransactionEntity::getId)
                          .toList();
-        ExecutorService executorService = Executors.newFixedThreadPool(3);
         CompletableFuture.runAsync(()->
-                userRepository.deleteAllByIdInBatch(ids),
-                executorService).thenRunAsync(()->transactionRepository.deleteAllByIdInBatch(userTransactionIds),
+                userRepository.deleteAllByIdInBatch(ids), executorService)
+                .thenRunAsync(()->transactionRepository.deleteAllByIdInBatch(userTransactionIds),
                         executorService)
-                        .whenCompleteAsync((r,e)->{
-                            if (e!=null){
-                                log.error("Throwable is: {}",e.getLocalizedMessage());
+                        .exceptionally((r)->{
+                            if (r!=null){
+                                log.error("Error in delete method cause: {}", r.getMessage());
                             }
+                            return null;
                         });
         log.info("[Deleted users: {}]",users);
 
@@ -577,17 +607,7 @@ public class UserServiceImpl implements UserService {
                 .reduce(BigDecimal.ZERO,BigDecimal::add);
     }
 
-    @Override
-    public long countAllUser() {
-        return userRepository.count();
-    }
 
-    @Override
-    public long countActiveUsers() {
-        var users = userRepository.countByStatus(UserStatus.ACTIVE);
-        log.info("Users is: {}",users);
-        return users;
-    }
 
     @Override
     public UserResponse getUserTransactions(Long userId) {

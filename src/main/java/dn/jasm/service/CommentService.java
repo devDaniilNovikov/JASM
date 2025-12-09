@@ -15,7 +15,8 @@ public interface CommentService {
 
     ListCommentResponse getCommentsByIds(List<Long> ids);
 
-    ListCommentResponse getCommentsWithPagination(int pageNumber, int pageSize);
+    ListCommentResponse getCommentsWithPagination(int pageNumber,
+                                                  int pageSize);
 
     MapCommentResponse getCommentsByUserId(Long userId);
 
@@ -23,7 +24,8 @@ public interface CommentService {
 
     void deleteComments(List<Long> commentIds);
 
-    void editComment(CommentUpdateRequest commentUpdateRequest,Long userId);
+    void editComment(CommentUpdateRequest commentUpdateRequest,
+                     Long userId);
 
     void addSubComment(Long commentId, String content);
 

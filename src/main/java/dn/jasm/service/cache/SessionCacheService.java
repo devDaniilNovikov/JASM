@@ -20,7 +20,8 @@ public interface SessionCacheService {
                            HttpServletResponse response);
 
     Map<String,Object> login(UserSessionLoginDto userSessionLoginDto,
-                             HttpSession session,HttpServletResponse response);
+                             HttpSession session,
+                             HttpServletResponse response);
 
     Map<String,Object> getCurrentSession(UserSessionLoginDto userSessionLoginDto,
                                          HttpSession session,

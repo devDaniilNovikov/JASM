@@ -26,6 +26,7 @@ import java.util.*;
 @Builder
 @Getter
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@ToString
 public class ShopResponse implements Serializable {
 
     @NotNull(message = "id can't be null")
@@ -71,6 +72,9 @@ public class ShopResponse implements Serializable {
 
     @Schema(description = "Страховой депозит")
     private BigDecimal deposit;
+
+    @Schema(description = "Статус магазина")
+    private String shopStatus;
 
     @DecimalMin("0.0")
     @JsonProperty("total_cash_turnover")

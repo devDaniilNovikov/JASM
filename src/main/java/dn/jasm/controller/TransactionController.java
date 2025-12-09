@@ -17,19 +17,19 @@ import java.util.List;
 @Tag(name = "Transaction",description = "Действия с транзакциями")
 public class TransactionController {
 
-    private static final String CREATE_TRANSACTION = "/api/v1/tx/create";
-    private static final String CANCEL_TRANSACTION = "/api/v1/tx/cancel";
+    private static final String CREATE_TRANSACTION = "/api/v1/txs/tx/create";
+    private static final String CANCEL_TRANSACTION = "/api/v1/txs/{id}/cancel";
     private static final String CANCEL_MULTIPLE_TRANSACTIONS = "/api/v1/txs/cancel";
     private static final String GET_TRANSACTION_SET = "/api/v1/tx/all";
-    private static final String DELETE_TRANSACTION = "/api/v1/tx/delete";
-    private static final String GET_TRANSACTION_BY_ID = "/api/v1/tx/get/{id}";
+    private static final String DELETE_TRANSACTION = "/api/v1/tx/{id}/delete";
+    private static final String GET_TRANSACTION_BY_ID = "/api/v1/tx/{id}/";
 
     private final TransactionService transactionService;
 
     @DeleteMapping(DELETE_TRANSACTION)
     @SwaggerAnnotationForTransaction(operation = "Удаление транзакции по ее уникальному идентификатору")
-    public void deleteTransaction(@RequestParam Long txId){
-        transactionService.deleteTransaction(txId);
+    public void deleteTransaction(@PathVariable Long id){
+        transactionService.deleteTransaction(id);
     }
 
     @GetMapping(GET_TRANSACTION_BY_ID)
@@ -48,8 +48,8 @@ public class TransactionController {
 
     @PatchMapping(value = CANCEL_TRANSACTION,produces = MediaType.APPLICATION_JSON_VALUE)
     @SwaggerAnnotationForTransaction(operation = "Отмена транзакции")
-    public void cancelTransaction(@RequestParam Long txId){
-         transactionService.cancelTransaction(txId);
+    public void cancelTransaction(@PathVariable Long id){
+         transactionService.cancelTransaction(id);
     }
 
     @PatchMapping(value = CANCEL_MULTIPLE_TRANSACTIONS,produces = MediaType.APPLICATION_JSON_VALUE)

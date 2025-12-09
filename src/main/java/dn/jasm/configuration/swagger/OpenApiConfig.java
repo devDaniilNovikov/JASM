@@ -47,7 +47,8 @@ public class OpenApiConfig {
         contact.setName(contactName);
         contact.setEmail(email);
         contact.setExtensions(Map.of(
-                "Headers","header"
+                "Headers",
+                "header"
         ));
         Info info = new Info()
                 .title(title)
