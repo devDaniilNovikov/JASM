@@ -7,6 +7,7 @@ import dn.jasm.entity.CardEntity;
 import dn.jasm.entity.OrderEntity;
 import dn.jasm.entity.TransactionEntity;
 import dn.jasm.entity.UserEntity;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import java.io.Serial;
@@ -26,38 +27,63 @@ import java.util.Set;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @AllArgsConstructor
 @NoArgsConstructor
+@Schema(name = "UserResponse", description = "Данные пользователя")
 public class UserResponse implements Serializable{
 
     @Serial
     private static final long serialVersionUID = -5629594248387283631L;
 
+    @Schema(name = "id",description = "Уникальный идентификатор пользователя")
     private Long id;
-    @JsonProperty(value = "имя пользователя")
+
+    @Schema(name = "username",description = "Имя пользователя")
     private String username;
+
     @JsonIgnore
+    @Schema(name = "password",description = "Пароль пользователя")
     private String password;
-    @JsonProperty(value = "номер телефона")
+
+    @Schema(name = "phoneNumber",description = "Номер телефона")
     private String phoneNumber;
-    @JsonProperty(value = "баланс пользователя")
+
+    @Schema(name = "balance", description = "Баланс пользователя")
     private BigDecimal balance;
-    @JsonProperty(value = "статус пользователя")
+
+    @Schema(name = "userStatus", description = "Статус пользователя")
     private String userStatus;
-    @JsonProperty(value = "почта пользователя")
+
+    @Schema(name = "email", description = "Почта пользователя")
     private String email;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING,pattern = "yyyy-MM-dd")
+    @Schema(name = "createdAt", description = "Дата регистрации пользователя")
     private LocalDate createdAt;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING,pattern = "yyyy-MM-dd")
+    @Schema(name = "updatedAt", description = "Дата обновления пользователя")
     private LocalDate updatedAt;
-    @JsonProperty(value = "количество покупок")
+
+    @Schema(name = "countOfDeals", description = "Количество покупок пользователя")
     private Integer countOfDeals;
+
+    @Schema(name = "orders", description = "Заказы пользователя")
     private List<OrderEntity> orders;
+
     @JsonIgnore
+    @Schema(name = "users", description = "Коллекция пользователей по их никнеймам")
     private Map<String,Object> users;
+
+    @Schema(name = "comments", description = "Комментарии пользователя")
     private List<CommentRequest> comments;
-    @JsonProperty(value = "пользователь и его транзакции")
+
+    @Schema(name = "txMap", description = "Транзакции пользователя")
     private Map<String,List<TransactionEntity>> txMap;
+
+    @Schema(name = "cards", description = "Карты пользователя")
     private Map<String, Set<CardResponse>> cards;
+
     @JsonIgnore
+    @Schema(name = "txMap", description = "Список пользователей")
     private List<UserEntity> userList;
 
     @Override

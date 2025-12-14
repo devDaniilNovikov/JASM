@@ -91,7 +91,7 @@ public class TransactionServiceImpl implements TransactionService {
                 transactionDto.getTxId(),
                 user.getId(),
                 true,
-                order.getAmount(),
+                order.getTotalAmount(),
                 true,
                 order.getId(),
                 transactionDto.getCardId()
@@ -101,7 +101,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     public TransactionDto createTx(OrderEntity order, UserEntity user, CardEntity cardEntity){
         TransactionEntity tx = new TransactionEntity();
-        tx.setTotalAmount(order.getAmount());
+        tx.setTotalAmount(order.getTotalAmount());
         tx.setTransactionStatus(TransactionStatus.PROCESSING);
         tx.setCompletedAt(true);
         var card = cardRepository.findById(cardEntity.getId()).orElseThrow(CardNotFoundException::new);
@@ -134,11 +134,11 @@ public class TransactionServiceImpl implements TransactionService {
                     MessageFormat.format("[Balance of user: {0} is null]",user.getBalance()));
 
         }
-        if (order.getAmount().compareTo(balance)>0){
+        if (order.getTotalAmount().compareTo(balance)>0){
             throw new IllegalArgumentException(
                     MessageFormat.format(
                             "[Insufficient balance {0} for order amount: {1}]",
-                            balance,order.getAmount()));
+                            balance,order.getTotalAmount()));
         }
     }
 

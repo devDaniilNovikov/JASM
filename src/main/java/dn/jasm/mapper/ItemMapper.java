@@ -4,24 +4,36 @@ import dn.jasm.dto.item.ItemRequest;
 import dn.jasm.dto.item.ItemResponse;
 import dn.jasm.dto.item.ListItemResponse;
 import dn.jasm.entity.ItemEntity;
+import dn.jasm.exception.ShopNotFoundException;
+import dn.jasm.repository.ShopRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.stereotype.Component;
 
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Objects;
 
 @Component
+@RequiredArgsConstructor
 public class ItemMapper {
+
+    private final ShopRepository shopRepository;
 
 
 
     public ItemEntity mapToEntity(ItemRequest itemRequest){
         var itemEntity = new ItemEntity();
         itemEntity.setName(itemRequest.getName());
-        itemEntity.setPrice(itemEntity.getPrice());
+        itemEntity.setPrice(itemRequest.getPrice());
         itemEntity.setQuantity(itemRequest.getQuantity());
         itemEntity.setDescription(itemRequest.getDescription());
         itemEntity.setIsShippable(itemRequest.getIsShippable());
+        itemEntity.setShop(shopRepository.findById(itemRequest.getShopId())
+                .orElseThrow(()->new ShopNotFoundException(
+                        MessageFormat.format(
+                                "Shop with id: {0} not found",itemRequest.getShopId()
+                        ))));
         return itemEntity;
     }
 

@@ -1,6 +1,8 @@
 package dn.jasm.dto.user;
 
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
@@ -18,6 +20,7 @@ import java.security.SecureRandom;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(name = "UserRequest", description = "ДТО для регистрации пользователя")
 public class UserRequest implements Serializable {
 
 
@@ -31,24 +34,28 @@ public class UserRequest implements Serializable {
             throw new RuntimeException(e.getMessage());
         }
     }
-//
-//    @NotEmpty(message = "Username can't be empty")
-//    @Size(min = 5,max = 20,message = "username size must be size between 5 and 20 chars!")
+    @NotEmpty(message = "Username can't be empty")
+    @Size(min = 5,max = 20,message = "username size must be size between 5 and 20 chars!")
+    @Schema(name = "username", description = "Никнейм пользователя")
     private String username;
 
-//    @NotEmpty(message = "Password can't be empty")
-//    @Size(min = 5,max = 50,message = "password size must be size between 5 and 50 chars!")
+    @NotEmpty(message = "Password can't be empty")
+    @Size(min = 5,max = 50,message = "password size must be size between 5 and 50 chars!")
+    @Schema(name = "password", description = "Пароль пользователя")
     private String password;
 
-//    @NotEmpty(message = "PhoneNumber can't be empty")
+    @NotEmpty(message = "PhoneNumber can't be empty")
+    @Schema(name = "phoneNumber", description = "Номер телефона пользователя")
     private String phoneNumber;
 
-//    @NotEmpty(message = "Email can't be empty")
+    @Nullable
+    @Schema(name = "email", description = "Почта пользователя")
     private String email;
 
-    private String orderId;
-
+    @Nullable
+    @Schema(name = "cardNumber", description = "Номер банковской карты пользователя")
     private String cardNumber;
+
 
 
 }

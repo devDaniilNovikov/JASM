@@ -6,7 +6,9 @@ import dn.jasm.dto.card.ListCardResponse;
 import dn.jasm.service.CardService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,6 +27,8 @@ public class CardController {
     private final CardService cardService;
 
     @DeleteMapping(DELETE_CARD_FROM_USER)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @SwaggerCardAnnotation(operation = "Удаление карты пользователя по его уникальному идентификатору, а также по уникальному идентификатору банковской карты")
     public void deleteCard(@RequestParam Long userId,
                            @PathVariable Long cardId){
         cardService.deleteCardFromUser(userId, cardId);
@@ -32,13 +36,15 @@ public class CardController {
     }
 
     @GetMapping(GET_CARDS_OF_USER)
-    @SwaggerCardAnnotation(operation = "Получение карт пользователя по его уникальному идентификатору ")
+    @SwaggerCardAnnotation(operation = "Получение карт пользователя по его уникальному идентификатору")
+    @ResponseStatus(HttpStatus.OK)
     public CardMapResponse getCardsOfUser(@PathVariable Long userId){
         return cardService.getCardsOfUser(userId);
     }
 
     @GetMapping(GET_CARD_BY_ID)
     @SwaggerCardAnnotation(operation = "Получение карт/ы по её уникальному идентификатору")
+    @ResponseStatus(HttpStatus.OK)
     public CardResponse getCardById(@PathVariable Long cardId){
         return cardService.getCardById(cardId);
     }
@@ -46,6 +52,7 @@ public class CardController {
 
     @GetMapping(GET_COUNT_OF_CARDS_OF_USER)
     @SwaggerCardAnnotation(operation = "Получение количества привязанных карт к аккаунту")
+    @ResponseStatus(HttpStatus.OK)
     public long getCountOfCardOfUser(@PathVariable Long userId){
         return cardService.getCountOfCardOfUser(userId);
     }
@@ -53,6 +60,7 @@ public class CardController {
 
     @SwaggerCardAnnotation(operation = "Добавление карты для аккаунта")
     @PostMapping(value = ADD_CARD,produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
     public void addCard(@RequestBody CardRequest cardRequest,
                         @RequestParam(required = false) Long userId){
         cardService.addCard(cardRequest,userId);
@@ -60,13 +68,15 @@ public class CardController {
 
     @SwaggerCardAnnotation(operation = "Удаление карты из аккаунта")
     @DeleteMapping(DELETE_CARD)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteCardFromUser(@RequestParam Long userId,
                                    @RequestParam Long cardId){
         cardService.deleteCardFromUser(userId,cardId);
     }
 
-    @SwaggerCardAnnotation(operation = "Получение списка привязанных карт")
+    @SwaggerCardAnnotation(operation = "Получение списка привязанных карт c пагинацией")
     @GetMapping(GET_LIST_OF_CARDS)
+    @ResponseStatus(HttpStatus.OK)
     public ListCardResponse getCardList(@RequestParam(defaultValue = "10",required = false) int pageSize,
                                         @RequestParam(defaultValue = "0",required = false) int pageNumber,
                                         @RequestParam Long userId){

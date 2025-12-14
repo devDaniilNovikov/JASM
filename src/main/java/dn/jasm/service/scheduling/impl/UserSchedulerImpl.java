@@ -1,4 +1,5 @@
 package dn.jasm.service.scheduling.impl;
+import dn.jasm.configuration.aop.Loggable;
 import dn.jasm.entity.UserEntity;
 import dn.jasm.repository.UserRepository;
 import dn.jasm.entity.enums.UserStatus;
@@ -24,6 +25,7 @@ public class UserSchedulerImpl implements UserScheduler {
     private final UserService userService;
     private final RedisTemplate<String,String> redisTemplate;
     private static final String REDIS_KEY_PREFIX = "*";
+    private static final long MAX_COUNT_OF_ELEMENTS = 10_000;
 
     @Override
     @Transactional
@@ -45,6 +47,7 @@ public class UserSchedulerImpl implements UserScheduler {
 
     @Transactional
     @Override
+    @Loggable
     public void unbanUser() {
         List<UserEntity> bannedUsers = userRepository.findAllByStatus(UserStatus.ACTIVE.name())
                 .stream()
@@ -59,7 +62,8 @@ public class UserSchedulerImpl implements UserScheduler {
                 .peek(user-> {
                     user.setStatus(UserStatus.NEW.name());
                     user.setIsPayOnceOrder(false);
-                }).toList();
+                })
+                .toList();
 
         log.info("Unbanned users: {}",unbannedUsers);
         userRepository.saveAll(unbannedUsers);
@@ -74,8 +78,8 @@ public class UserSchedulerImpl implements UserScheduler {
     public void cleanCache(){
         Set<String> keys = Objects.requireNonNull(redisTemplate.scan(
                 ScanOptions.scanOptions()
-                        .count(100)
-                        .match(REDIS_KEY_PREFIX.getBytes(StandardCharsets.UTF_8))
+                        .count(MAX_COUNT_OF_ELEMENTS)
+                        .match(REDIS_KEY_PREFIX)
                         .build()))
                         .stream()
                         .collect(Collectors.toSet());

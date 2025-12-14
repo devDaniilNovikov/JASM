@@ -14,4 +14,8 @@ public interface ItemRepository extends JpaRepository<ItemEntity, Long> {
     List<ItemEntity> findAllByOrderId(@Param("orderId") Long orderId);
 
     List<ItemEntity> findAllByIdIn(List<Long> ids);
+
+    boolean existsByNameIgnoreCase(String name);
+
+    List<ItemEntity> findAllByNameIn(List<String> itemsNames);
 }

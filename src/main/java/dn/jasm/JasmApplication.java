@@ -1,9 +1,13 @@
 package dn.jasm;
 
 
+import dn.jasm.exception.ApplicationStartRunningException;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.diagnostics.AbstractFailureAnalyzer;
+import org.springframework.boot.diagnostics.FailureAnalysis;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.retry.annotation.EnableRetry;
@@ -27,4 +31,13 @@ public class JasmApplication {
     }
 
 
+    @Configuration
+    public static class ApplicationGlobalConfig extends AbstractFailureAnalyzer<ApplicationStartRunningException> {
+        @Override
+        protected FailureAnalysis analyze(Throwable rootFailure,
+                                          ApplicationStartRunningException cause) {
+            return new FailureAnalysis("Application was down on start-time cause",
+                    "Check your start-configuration", cause);
+        }
+    }
 }

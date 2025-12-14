@@ -50,7 +50,7 @@ spring:
   config:
     import: optional:file:.env[.properties]
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: update
 
@@ -186,9 +186,9 @@ open-api:
 
 order:
   discount:
-    value: ${ORDER_DISCOUNT_VALUE}
+    value: 10
   limit:
-    value: ${ORDER_LIMIT_VALUE}
+    value: 10
 
 
 

@@ -2,6 +2,7 @@ package dn.jasm.service;
 
 import dn.jasm.dto.shop.*;
 import dn.jasm.entity.ShopEntity;
+import dn.jasm.event.ItemEvent;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -42,6 +43,8 @@ public interface ShopService {
 
     void updateShop(Long shopId,
                     ShopUpdateRequest shopUpdateRequest);
+
+    void handleCreateItem(ItemEvent itemEvent);
 
 
 

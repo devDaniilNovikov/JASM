@@ -28,12 +28,12 @@ public class PaymentController {
     
     @GetMapping(GET_PAYMENT_STATUS)
     @ResponseStatus(HttpStatus.OK)
-
     public PaymentResponse getPaymentStatus(@PathVariable String id){
         return paymentService.getPaymentStatus(id);
     }
 
     @PostMapping(CANCEL_PAYMENT)
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public PaymentIntent cancelPayment(@PathVariable String paymentId){
         return paymentService.cancelPayment(paymentId);
     }

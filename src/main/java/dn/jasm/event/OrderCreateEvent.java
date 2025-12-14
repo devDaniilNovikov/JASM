@@ -13,7 +13,7 @@ import java.util.Map;
 
 @Getter
 @Setter
-public class OrderCreateEvent extends ApplicationEvent implements BaseEvent {
+public class  OrderCreateEvent extends ApplicationEvent implements BaseEvent {
 
     private Long orderId;
     private Boolean payedAt;

@@ -3,6 +3,7 @@ package dn.jasm.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dn.jasm.configuration.aop.Loggable;
 import dn.jasm.configuration.redis.CacheNames;
 import dn.jasm.dto.item.ItemRequest;
 import dn.jasm.dto.item.ItemResponse;
@@ -10,6 +11,7 @@ import dn.jasm.dto.shop.*;
 import dn.jasm.entity.ShopEntity;
 import dn.jasm.entity.UserEntity;
 import dn.jasm.entity.enums.ShopStatus;
+import dn.jasm.event.ItemEvent;
 import dn.jasm.event.shop.ShopEvent;
 import dn.jasm.exception.ItemNotFoundException;
 import dn.jasm.exception.ShopNotFoundException;
@@ -26,11 +28,14 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.lang.ref.WeakReference;
 import java.math.BigDecimal;
@@ -429,9 +434,12 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     public MapShopResponse getItemsOfShop(String shopName) {
-        var cacheValue = redisTemplate.opsForValue().get(shopName);
+        var cacheKey = CacheNames.ITEM_CACHE
+                .getValue()
+                .concat(shopName);
+        var cacheValue = redisTemplate.opsForValue().get(cacheKey);
         if (cacheValue!=null){
-            log.info("Value was get from cache: {}",cacheValue);
+            logService.cacheLog(cacheKey,cacheValue);
             return objectsMapper.convertValue(cacheValue, MapShopResponse.class);
         }
         var shop = shopRepository.findByName(shopName).orElseThrow();
@@ -449,7 +457,7 @@ public class ShopServiceImpl implements ShopService {
         redisTemplate.opsForValue().set(shopName,
                 mapShopResponse,
                 Duration.ofMinutes(10));
-        log.info("Value was get from db: {}",mapShopResponse.getShopItemMap());
+        logService.dbLog(mapShopResponse.getShopItemMap());
         return mapShopResponse;
     }
 
@@ -470,7 +478,7 @@ public class ShopServiceImpl implements ShopService {
                 .stream()
                 .map(shop-> shop.getUser().getUsername())
                 .findFirst()
-                .orElseThrow(UserNotFoundException::new);
+                .orElseThrow(()->new UserNotFoundException("User not found"));
         return ShopResponse.builder()
                 .ownerName(ownerName)
                 .build();
@@ -531,6 +539,13 @@ public class ShopServiceImpl implements ShopService {
                     throw new ShopNotFoundException(MessageFormat.format(
                             "Shop with id: {0} not found",shopId));
                 });
+    }
+
+    @EventListener
+    @Loggable
+    @Override
+    public void handleCreateItem(ItemEvent itemEvent) {
+        log.info("New item in shop: {}",itemEvent.getName());
     }
 
 

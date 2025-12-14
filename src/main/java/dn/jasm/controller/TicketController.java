@@ -31,7 +31,7 @@ public class TicketController {
     private final TicketService ticketService;
 
     @GetMapping(value = GENERATE_PDF)
-    public byte[] generatePdf(HttpServletResponse httpServletResponse) throws Exception {
+    public byte[] generatePdf(HttpServletResponse httpServletResponse) {
         return ticketService.writeTicketOnPfd(httpServletResponse);
     }
 }

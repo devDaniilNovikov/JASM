@@ -30,11 +30,31 @@ public class OrderMapper {
     public OrderEntity mapToEntity(OrderRequest orderRequest,List<Long> itemsIds){
         OrderEntity order = new OrderEntity();
         order.setId(order.getId());
-        order.setAmount(orderRequest.getTotalAmount());
+        order.setTotalAmount(orderRequest.getTotalAmount());
         var items = itemRepository.findAllById(itemsIds);
         order.setItems(items);
         order.setDiscount(orderRequest.getDiscount());
         order.setQuantityOfItems(orderRequest.getQuantity());
+        return order;
+    }
+
+    public OrderEntity mapToEntity(OrderResponse orderResponse) {
+        OrderEntity order = new OrderEntity();
+        order.setId(orderResponse.getId());
+        order.setTotalAmount(orderResponse.getTotalAmount());
+        order.setQuantityOfItems(orderResponse.getQuantity());
+
+        if (orderResponse.getUserId() != null) {
+            var user = userRepository.findById(orderResponse.getUserId())
+                    .orElseThrow(() -> new UserNotFoundException("User not found"));
+            order.setUser(user);
+        }
+
+        if (orderResponse.getItemsNames() != null && !orderResponse.getItemsNames().isEmpty()) {
+            var items = itemRepository.findAllByNameIn(orderResponse.getItemsNames());
+            order.setItems(items);
+        }
+
         return order;
     }
 
@@ -48,9 +68,8 @@ public class OrderMapper {
                         .toList()
                         .size())
                 .userId(order.getUser() != null ? order.getUser().getId() : null)
-                .totalAmount(order.getAmount())
+                .totalAmount(order.getTotalAmount())
                 .isPayed(true)
-                .status(order.getOrderStatus().getValue())
                 .itemsNames(order.getItems()
                         .stream()
                         .map(ItemEntity::getName)

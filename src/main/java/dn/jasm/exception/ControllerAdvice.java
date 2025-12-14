@@ -32,6 +32,16 @@ public class ControllerAdvice {
                         .build());
     }
 
+    @ExceptionHandler(OrderNotFoundException.class)
+    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, OrderNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorBody.builder()
+                        .statusCode(HttpStatus.NOT_FOUND.value())
+                        .description(ex.getMessage())
+                        .path(webRequest.getDescription(false))
+                        .build());
+    }
+
 
 //    @ExceptionHandler(Exception.class)
 //    private ResponseEntity<ErrorBody> handleException(WebRequest webRequest, Exception ex){

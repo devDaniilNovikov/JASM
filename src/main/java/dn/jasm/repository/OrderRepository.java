@@ -4,7 +4,9 @@ import dn.jasm.entity.OrderEntity;
 import dn.jasm.entity.enums.OrderStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +18,9 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
 
     List<OrderEntity> findAllByUserId(Long userId);
 
-    List<OrderEntity> findAllByOrderStatus(OrderStatus orderStatus, Pageable pageable);
+
+    @Query("select o from OrderEntity o where o.orderStatus =:orderStatus")
+    List<OrderEntity> findAllByOrderStatus(@Param("orderStatus") OrderStatus orderStatus,
+                                           Pageable pageable);
 
 }

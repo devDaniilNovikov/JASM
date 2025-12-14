@@ -26,7 +26,7 @@ public class TransactionMapper {
                 .userId(transactionEntity.getUser().getId())
                 .orderId(transactionEntity.getOrderEntity().getId())
                 .cardId(transactionEntity.getCard().getId())
-                .amount(transactionEntity.getOrderEntity().getAmount())
+                .amount(transactionEntity.getOrderEntity().getTotalAmount())
                 .transactionStatus(TransactionStatus.COMPLETED)
                 .completedAt(true)
                 .build();

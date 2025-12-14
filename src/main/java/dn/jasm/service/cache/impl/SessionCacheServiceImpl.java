@@ -12,6 +12,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.http.HttpStatus;
 import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,14 +88,13 @@ public class SessionCacheServiceImpl implements SessionCacheService {
                         .equals(userSessionLoginDto.username()))
                 .orElseThrow(UserNotFoundException::new);
         Map<String,Object> sessionMap = new HashMap<>();
-        sessionMap.put(SessionAttributes.SESSION_ID.getValue(),session.getId());
+        sessionMap.put(SessionAttributes.SESSION_ID.getValue(), session.getId());
         sessionMap.put(SessionAttributes.USER_ID.getValue(),requireUser.getId());
         sessionMap.put(SessionAttributes.USERNAME.getValue(),requireUser.getUsername());
         sessionMap.put(SessionAttributes.LOGIN_TIME.getValue(),System.currentTimeMillis());
-        if(sessionMap.values()
-                .stream()
-                .anyMatch(Objects::isNull)){
+        if(sessionMap.values().stream().anyMatch(Objects::isNull)) {
             response.setStatus(400);
+            log.info("Response of this request: {}",response.getStatus());
         }
         response.setStatus(200);
         Map<String,Object> updatedSession = new HashMap<>(sessionMap);
@@ -131,20 +131,21 @@ public class SessionCacheServiceImpl implements SessionCacheService {
     public void invalidateSessions(String redisKeysPrefix,
                                    HttpServletResponse response) {
         redisKeysPrefix = SessionAttributes.REDIS_KEYS_PREFIX.getValue();
-        var keys = redisTemplate.scan(
-                ScanOptions.scanOptions()
+        redisTemplate.scan(ScanOptions.scanOptions()
                         .match(redisKeysPrefix)
                         .count(10000)
-                        .build()
-        ).stream().collect(Collectors.toSet());
-        keys.forEach(redisTemplate::delete);
+                        .build())
+                        .stream()
+                        .collect(Collectors.toSet())
+                        .forEach(redisTemplate::delete);
+        response.setStatus(HttpStatus.NO_CONTENT.value());
     }
 
     @Override
     public String getTtlOfSession(String sessionId,
                                   HttpServletResponse response) {
         var ttl = redisTemplate.getExpire(sessionId);
-        log.info("EXPIRE OF SESSION: {} IS {}",sessionId,ttl);
+        log.info("[EXPIRE OF SESSION: {} IS {}]",sessionId,ttl);
         return String.valueOf(ttl);
     }
 

@@ -1,6 +1,7 @@
 package dn.jasm.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.persistence.CascadeType;
@@ -22,6 +23,7 @@ import java.util.Objects;
         @Index(name = "username_idx",columnList = "username")})
 @Getter
 @Setter
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserEntity extends BasedEntity {
 
     private static final int BATCH_SIZE = 10;
@@ -34,6 +36,10 @@ public class UserEntity extends BasedEntity {
 
     @Column(unique = true,length = 11,nullable = false)
     private String phoneNumber;
+
+
+    @Column(name = "count_of_buyes",nullable = true)
+    private Integer countOfBuyes;
 
     @OneToMany(cascade = CascadeType.ALL,fetch = FetchType.LAZY,orphanRemoval = true,mappedBy = "user")
     @JsonManagedReference("user-transactions")

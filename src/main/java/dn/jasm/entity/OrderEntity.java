@@ -2,6 +2,7 @@ package dn.jasm.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import dn.jasm.entity.enums.OrderStatus;
 import jakarta.persistence.*;
@@ -21,6 +22,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OrderEntity extends BasedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY,cascade = {CascadeType.PERSIST,CascadeType.MERGE})
@@ -29,7 +31,7 @@ public class OrderEntity extends BasedEntity {
     private UserEntity user;
 
     @Column(nullable = false)
-    private BigDecimal amount;
+    private BigDecimal totalAmount;
 
     @Column(nullable = false)
     private Boolean payedAt = false;
@@ -83,7 +85,7 @@ public class OrderEntity extends BasedEntity {
     @Override
     public String toString() {
         return "OrderEntity{" +
-                "amount=" + amount +
+                "totalAmount=" + totalAmount +
                 ", user=" + user +
                 ", payedAt=" + payedAt +
                 ", rating=" + rating +
